@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 
 export default async function Home() {
@@ -13,6 +14,9 @@ export default async function Home() {
         <p>Conectado. Usuario: {JSON.stringify(data.user)}</p>
       )}
       <p>Si ves este mensaje sin errores de compilación, la conexión con Supabase está bien configurada.</p>
+      <p>
+        <Link href="/accounts">Ir a cuentas</Link>
+      </p>
     </main>
   )
 }
