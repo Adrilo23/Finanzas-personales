@@ -16,6 +16,7 @@ export default async function Home() {
       <p>Si ves este mensaje sin errores de compilación, la conexión con Supabase está bien configurada.</p>
       <p>
         <Link href="/accounts">Ir a cuentas</Link>
+        <Link href="/categories">Ir a categorías</Link>
       </p>
     </main>
   )
