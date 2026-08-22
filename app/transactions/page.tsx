@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { formatCents } from '@/lib/money'
 import { NewTransactionDialog } from './new-transaction-dialog'
 import { DeleteTransactionButton } from './delete-transaction-button'
+import { TransactionFilters } from './transaction-filters'
 
 type TransactionRow = {
   id: string
@@ -18,18 +19,37 @@ function first<T>(value: T[] | T | null): T | null {
   return value
 }
 
-export default async function TransactionsPage() {
+type SearchParams = {
+  accountId?: string
+  categoryId?: string
+  from?: string
+  to?: string
+}
+
+export default async function TransactionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>
+}) {
+  const params = await searchParams
   const supabase = await createClient()
 
+  let query = supabase
+    .from('transactions')
+    .select(
+      'id, amount_cents, currency, description, transaction_date, accounts(name), categories(name, type)'
+    )
+    .is('deleted_at', null)
+    .order('transaction_date', { ascending: false })
+    .order('created_at', { ascending: false })
+
+  if (params.accountId) query = query.eq('account_id', params.accountId)
+  if (params.categoryId) query = query.eq('category_id', params.categoryId)
+  if (params.from) query = query.gte('transaction_date', params.from)
+  if (params.to) query = query.lte('transaction_date', params.to)
+
   const [{ data: transactions }, { data: accounts }, { data: categories }] = await Promise.all([
-    supabase
-      .from('transactions')
-      .select(
-        'id, amount_cents, currency, description, transaction_date, accounts(name), categories(name, type)'
-      )
-      .is('deleted_at', null)
-      .order('transaction_date', { ascending: false })
-      .order('created_at', { ascending: false }),
+    query,
     supabase.from('accounts').select('id, name').order('created_at', { ascending: true }),
     supabase.from('categories').select('id, name, type').order('name', { ascending: true }),
   ])
@@ -43,8 +63,14 @@ export default async function TransactionsPage() {
         <NewTransactionDialog accounts={accounts ?? []} categories={categories ?? []} />
       </div>
 
+      <TransactionFilters
+        accounts={accounts ?? []}
+        categories={categories ?? []}
+        current={params}
+      />
+
       {rows.length === 0 ? (
-        <p className="text-muted-foreground">Todavía no tienes ningún movimiento registrado.</p>
+        <p className="text-muted-foreground">No hay movimientos que coincidan con el filtro.</p>
       ) : (
         <div className="divide-y rounded-lg border">
           {rows.map((t) => {
