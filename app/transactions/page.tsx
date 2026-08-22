@@ -27,6 +27,7 @@ export default async function TransactionsPage() {
       .select(
         'id, amount_cents, currency, description, transaction_date, accounts(name), categories(name, type)'
       )
+      .is('deleted_at', null)
       .order('transaction_date', { ascending: false })
       .order('created_at', { ascending: false }),
     supabase.from('accounts').select('id, name').order('created_at', { ascending: true }),

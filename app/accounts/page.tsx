@@ -7,8 +7,8 @@ import { DeleteAccountButton } from './delete-account-button'
 export default async function AccountsPage() {
   const supabase = await createClient()
   const { data: accounts } = await supabase
-    .from('accounts')
-    .select('id, name, type, currency, initial_balance_cents')
+    .from('account_balances')
+    .select('id, name, type, currency, initial_balance_cents, balance_cents')
     .order('created_at', { ascending: true })
 
   return (
@@ -29,11 +29,16 @@ export default async function AccountsPage() {
               <div>
                 <p className="font-medium">{account.name}</p>
                 <p className="text-sm text-muted-foreground">
-                  {ACCOUNT_TYPE_LABELS[account.type as keyof typeof ACCOUNT_TYPE_LABELS]} · Saldo
-                  inicial: {formatCents(account.initial_balance_cents, account.currency)}
+                  {ACCOUNT_TYPE_LABELS[account.type as keyof typeof ACCOUNT_TYPE_LABELS]} ·
+                  Saldo inicial: {formatCents(account.initial_balance_cents, account.currency)}
                 </p>
               </div>
-              <DeleteAccountButton id={account.id} />
+              <div className="flex items-center gap-3">
+                <span className="font-semibold">
+                  {formatCents(account.balance_cents, account.currency)}
+                </span>
+                <DeleteAccountButton id={account.id} />
+              </div>
             </div>
           ))}
         </div>

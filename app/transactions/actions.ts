@@ -56,17 +56,23 @@ export async function createTransaction(formData: FormData) {
   }
 
   revalidatePath('/transactions')
+  revalidatePath('/accounts')
   return { success: true }
 }
 
 export async function deleteTransaction(id: string) {
   const supabase = await createClient()
-  const { error } = await supabase.from('transactions').delete().eq('id', id)
+  // Soft delete: mantenemos la fila para no perder trazabilidad de saldos históricos.
+  const { error } = await supabase
+    .from('transactions')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', id)
 
   if (error) {
     return { error: error.message }
   }
 
   revalidatePath('/transactions')
+  revalidatePath('/accounts')
   return { success: true }
 }
