@@ -87,7 +87,7 @@ export function NewAccountDialog() {
               id="initialBalance"
               type="number"
               step="0.01"
-              {...register('initialBalance')}
+              {...register('initialBalance', { valueAsNumber: true })}
             />
             {errors.initialBalance && (
               <p className="text-sm text-red-500">{errors.initialBalance.message}</p>
