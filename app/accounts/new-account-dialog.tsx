@@ -85,9 +85,16 @@ export function NewAccountDialog() {
             <Label htmlFor="initialBalance">Saldo inicial (€)</Label>
             <Input
               id="initialBalance"
-              type="number"
-              step="0.01"
-              {...register('initialBalance', { valueAsNumber: true })}
+              type="text"
+              inputMode="decimal"
+              {...register('initialBalance', {
+                setValueAs: (v) => {
+                  if (typeof v === 'number') return v
+                  const normalized = String(v).replace(',', '.').trim()
+                  const num = parseFloat(normalized)
+                  return Number.isNaN(num) ? 0 : num
+                },
+              })}
             />
             {errors.initialBalance && (
               <p className="text-sm text-red-500">{errors.initialBalance.message}</p>

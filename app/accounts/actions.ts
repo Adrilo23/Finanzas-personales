@@ -10,7 +10,7 @@ export async function createAccount(formData: FormData) {
     name: formData.get('name'),
     type: formData.get('type'),
     currency: formData.get('currency') || 'EUR',
-    initialBalance: formData.get('initialBalance'),
+    initialBalance: Number(formData.get('initialBalance')),
   })
 
   if (!parsed.success) {
