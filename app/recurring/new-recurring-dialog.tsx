@@ -156,7 +156,7 @@ export function NewRecurringDialog({
 
           <div className="space-y-1">
             <Label htmlFor="nextRunDate">Primera fecha</Label>
-            <Input id="nextRunDate" name="nextRunDate" type="date" {...register('nextRunDate')} />
+            <Input id="nextRunDate" type="date" {...register('nextRunDate')} />
             {errors.nextRunDate && (
               <p className="text-sm text-red-500">{errors.nextRunDate.message}</p>
             )}

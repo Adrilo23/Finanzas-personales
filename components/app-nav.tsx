@@ -22,6 +22,7 @@ export async function AppNav() {
           <Link href="/categories">Categorías</Link>
           <Link href="/transactions">Movimientos</Link>
           <Link href="/recurring">Recurrentes</Link>
+          <Link href="/reports">Evolución</Link>
         </div>
         <form action={logout}>
           <button type="submit" className="text-sm text-muted-foreground underline">
