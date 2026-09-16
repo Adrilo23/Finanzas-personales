@@ -3,6 +3,7 @@ import { formatCents } from '@/lib/money'
 import { NewTransactionDialog } from './new-transaction-dialog'
 import { DeleteTransactionButton } from './delete-transaction-button'
 import { TransactionFilters } from './transaction-filters'
+import { AttachmentDialog } from './attachment-dialog'
 
 type TransactionRow = {
   id: string
@@ -96,6 +97,7 @@ export default async function TransactionsPage({
                   >
                     {formatCents(t.amount_cents, t.currency)}
                   </span>
+                  <AttachmentDialog transactionId={t.id} />
                   <DeleteTransactionButton id={t.id} />
                 </div>
               </div>
