@@ -1,7 +1,8 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { transactionSchema } from '@/lib/validation/transaction-schemas'
+import { transactionSchema, transferSchema } from '@/lib/validation/transaction-schemas'
+import { buildTransferRows } from '@/lib/transfers'
 import { applyCategorySign, eurosToCents } from '@/lib/money'
 import { revalidatePath } from 'next/cache'
 
@@ -114,13 +115,97 @@ export async function updateTransaction(id: string, formData: FormData) {
   return { success: true }
 }
 
+function parseTransfer(formData: FormData) {
+  return transferSchema.safeParse({
+    fromAccountId: formData.get('fromAccountId'),
+    toAccountId: formData.get('toAccountId'),
+    amount: Number(formData.get('amount')),
+    description: formData.get('description') || '',
+    transactionDate: formData.get('transactionDate'),
+  })
+}
+
+/** Traspaso entre cuentas propias: dos movimientos enlazados, insertados en una sola sentencia. */
+export async function createTransfer(formData: FormData) {
+  const parsed = parseTransfer(formData)
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message }
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return { error: 'No autenticado' }
+  }
+
+  // Las FK no pasan por RLS: ambas cuentas deben ser del usuario.
+  const { count } = await supabase
+    .from('accounts')
+    .select('id', { count: 'exact', head: true })
+    .in('id', [parsed.data.fromAccountId, parsed.data.toAccountId])
+  if (count !== 2) {
+    return { error: 'Cuenta no válida' }
+  }
+
+  const { error } = await supabase.from('transactions').insert(
+    buildTransferRows({
+      userId: user.id,
+      transferId: crypto.randomUUID(),
+      fromAccountId: parsed.data.fromAccountId,
+      toAccountId: parsed.data.toAccountId,
+      amountCents: eurosToCents(parsed.data.amount),
+      date: parsed.data.transactionDate,
+      description: parsed.data.description,
+    })
+  )
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidateMoneyViews()
+  return { success: true }
+}
+
+/** Edita las dos patas a la vez (función update_transfer, atómica y con RLS). */
+export async function updateTransfer(transferId: string, formData: FormData) {
+  const parsed = parseTransfer(formData)
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message }
+  }
+
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('update_transfer', {
+    p_transfer_id: transferId,
+    p_from_account: parsed.data.fromAccountId,
+    p_to_account: parsed.data.toAccountId,
+    p_amount_cents: eurosToCents(parsed.data.amount),
+    p_date: parsed.data.transactionDate,
+    p_description: parsed.data.description || '',
+  })
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidateMoneyViews()
+  return { success: true }
+}
+
 export async function deleteTransaction(id: string) {
   const supabase = await createClient()
-  // Soft delete: mantenemos la fila para no perder trazabilidad de saldos históricos.
-  const { error } = await supabase
+  // Si es una pata de un traspaso, se borran las dos.
+  const { data: row } = await supabase
     .from('transactions')
-    .update({ deleted_at: new Date().toISOString() })
+    .select('transfer_id')
     .eq('id', id)
+    .maybeSingle()
+
+  // Soft delete: mantenemos la fila para no perder trazabilidad de saldos históricos.
+  const deletion = supabase.from('transactions').update({ deleted_at: new Date().toISOString() })
+  const { error } = row?.transfer_id
+    ? await deletion.eq('transfer_id', row.transfer_id)
+    : await deletion.eq('id', id)
 
   if (error) {
     return { error: error.message }

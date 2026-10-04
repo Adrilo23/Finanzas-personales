@@ -1,4 +1,10 @@
-import { ArrowDownLeftIcon, ArrowUpRightIcon, TrendingUpIcon, type LucideIcon } from 'lucide-react'
+import {
+  ArrowDownLeftIcon,
+  ArrowLeftRightIcon,
+  ArrowUpRightIcon,
+  TrendingUpIcon,
+  type LucideIcon,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export type CategoryType = 'income' | 'expense' | 'investment'
@@ -59,6 +65,21 @@ export function CategoryBadge({
       )}
     >
       {emoji ? emoji : Icon ? <Icon className="size-4" strokeWidth={2} /> : '·'}
+    </span>
+  )
+}
+
+/** Icono de un traspaso entre cuentas propias (no es ingreso ni gasto). */
+export function TransferBadge({ className }: { className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        'grid size-9 shrink-0 place-items-center rounded-[10px] bg-muted text-foreground/70',
+        className
+      )}
+    >
+      <ArrowLeftRightIcon className="size-4" strokeWidth={2} />
     </span>
   )
 }

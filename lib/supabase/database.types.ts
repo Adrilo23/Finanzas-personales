@@ -178,6 +178,7 @@ export type Database = {
       }
       holding_operations: {
         Row: {
+          affects_cash: boolean
           amount_cents: number
           created_at: string
           holding_id: string
@@ -188,6 +189,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          affects_cash?: boolean
           amount_cents: number
           created_at?: string
           holding_id: string
@@ -198,6 +200,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          affects_cash?: boolean
           amount_cents?: number
           created_at?: string
           holding_id?: string
@@ -289,6 +292,7 @@ export type Database = {
           frequency: string
           id: string
           next_run_date: string
+          to_account_id: string | null
           user_id: string
         }
         Insert: {
@@ -301,6 +305,7 @@ export type Database = {
           frequency: string
           id?: string
           next_run_date: string
+          to_account_id?: string | null
           user_id: string
         }
         Update: {
@@ -313,6 +318,7 @@ export type Database = {
           frequency?: string
           id?: string
           next_run_date?: string
+          to_account_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -337,6 +343,20 @@ export type Database = {
             referencedRelation: "categories"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "recurring_rules_to_account_id_fkey"
+            columns: ["to_account_id"]
+            isOneToOne: false
+            referencedRelation: "account_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_rules_to_account_id_fkey"
+            columns: ["to_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
         ]
       }
       transactions: {
@@ -351,6 +371,7 @@ export type Database = {
           id: string
           recurring_rule_id: string | null
           transaction_date: string
+          transfer_id: string | null
           updated_at: string
           user_id: string
         }
@@ -365,6 +386,7 @@ export type Database = {
           id?: string
           recurring_rule_id?: string | null
           transaction_date?: string
+          transfer_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -379,6 +401,7 @@ export type Database = {
           id?: string
           recurring_rule_id?: string | null
           transaction_date?: string
+          transfer_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -418,6 +441,7 @@ export type Database = {
       account_balances: {
         Row: {
           balance_cents: number | null
+          cash_cents: number | null
           created_at: string | null
           currency: string | null
           id: string | null
@@ -426,28 +450,6 @@ export type Database = {
           name: string | null
           type: string | null
           user_id: string | null
-        }
-        Insert: {
-          balance_cents?: never
-          created_at?: string | null
-          currency?: string | null
-          id?: string | null
-          initial_balance_cents?: number | null
-          market_value_cents?: never
-          name?: string | null
-          type?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          balance_cents?: never
-          created_at?: string | null
-          currency?: string | null
-          id?: string | null
-          initial_balance_cents?: number | null
-          market_value_cents?: never
-          name?: string | null
-          type?: string | null
-          user_id?: string | null
         }
         Relationships: []
       }
@@ -487,7 +489,17 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      update_transfer: {
+        Args: {
+          p_amount_cents: number
+          p_date: string
+          p_description: string
+          p_from_account: string
+          p_to_account: string
+          p_transfer_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

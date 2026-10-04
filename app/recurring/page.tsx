@@ -7,7 +7,7 @@ import { applyCategorySign } from '@/lib/money'
 import { PageHeader, PageShell } from '@/components/page-header'
 import { EmptyState } from '@/components/empty-state'
 import { Amount } from '@/components/amount'
-import { CategoryBadge } from '@/components/category-type'
+import { CategoryBadge, TransferBadge } from '@/components/category-type'
 import { cn } from '@/lib/utils'
 import { NewRecurringDialog } from './new-recurring-dialog'
 import { RecurringRuleActions } from './recurring-rule-actions'
@@ -20,7 +20,9 @@ type RuleRow = {
   frequency: string
   next_run_date: string
   active: boolean
-  accounts: { name: string }[] | { name: string } | null
+  to_account_id: string | null
+  account: { name: string }[] | { name: string } | null
+  to_account: { name: string }[] | { name: string } | null
   categories:
     | { name: string; type: string; icon: string | null }[]
     | { name: string; type: string; icon: string | null }
@@ -39,21 +41,22 @@ export default async function RecurringPage() {
     supabase
       .from('recurring_rules')
       .select(
-        'id, amount_cents, frequency, next_run_date, active, accounts(name), categories(name, type, icon)'
+        // Dos relaciones con accounts (origen y destino de traspasos): hay que nombrarlas.
+        'id, amount_cents, frequency, next_run_date, active, to_account_id, account:accounts!recurring_rules_account_id_fkey(name), to_account:accounts!recurring_rules_to_account_id_fkey(name), categories(name, type, icon)'
       )
       .order('next_run_date', { ascending: true }),
     supabase.from('accounts').select('id, name').order('created_at', { ascending: true }),
     supabase.from('categories').select('id, name, type').order('name', { ascending: true }),
   ])
 
-  const rows = (rules ?? []) as RuleRow[]
+  const rows = (rules ?? []) as unknown as RuleRow[]
   const activeCount = rows.filter((r) => r.active).length
 
   return (
     <PageShell>
       <PageHeader
         title="Recurrentes"
-        description="Nóminas, alquileres o suscripciones que se registran solos en su fecha."
+        description="Nóminas, alquileres, suscripciones o traspasos que se registran solos en su fecha."
         actions={<NewRecurringDialog accounts={accounts ?? []} categories={categories ?? []} />}
       />
 
@@ -73,8 +76,10 @@ export default async function RecurringPage() {
           </p>
           <ul className="surface divide-y divide-border/70 overflow-hidden">
             {rows.map((rule) => {
-              const account = first(rule.accounts)
+              const account = first(rule.account)
+              const toAccount = first(rule.to_account)
               const category = first(rule.categories)
+              const isTransfer = rule.to_account_id !== null
               return (
                 <li
                   key={rule.id}
@@ -86,10 +91,16 @@ export default async function RecurringPage() {
                       !rule.active && 'opacity-55'
                     )}
                   >
-                    <CategoryBadge type={category?.type} emoji={category?.icon} />
+                    {isTransfer ? (
+                      <TransferBadge />
+                    ) : (
+                      <CategoryBadge type={category?.type} emoji={category?.icon} />
+                    )}
                     <div className="min-w-0 flex-1">
                       <p className="flex items-center gap-2 truncate text-[0.9375rem] font-medium">
-                        <span className="truncate">{category?.name ?? 'Sin categoría'}</span>
+                        <span className="truncate">
+                          {isTransfer ? 'Traspaso' : (category?.name ?? 'Sin categoría')}
+                        </span>
                         {!rule.active && (
                           <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[0.6875rem] font-medium text-muted-foreground">
                             Pausada
@@ -98,15 +109,22 @@ export default async function RecurringPage() {
                       </p>
                       <p className="truncate text-[0.8125rem] text-muted-foreground">
                         {FREQUENCY_LABELS[rule.frequency as keyof typeof FREQUENCY_LABELS]} ·{' '}
-                        {account?.name} · próxima el {formatShortDate(rule.next_run_date)}
+                        {isTransfer
+                          ? `${account?.name ?? '—'} → ${toAccount?.name ?? '—'}`
+                          : account?.name}{' '}
+                        · próxima el {formatShortDate(rule.next_run_date)}
                       </p>
                     </div>
-                    <Amount
-                      // Las reglas guardan el importe en positivo; el signo sale del tipo.
-                      cents={applyCategorySign(rule.amount_cents, category?.type)}
-                      signed
-                      className="text-[0.9375rem] font-semibold"
-                    />
+                    {isTransfer ? (
+                      <Amount cents={rule.amount_cents} className="text-[0.9375rem] font-semibold" />
+                    ) : (
+                      <Amount
+                        // Las reglas guardan el importe en positivo; el signo sale del tipo.
+                        cents={applyCategorySign(rule.amount_cents, category?.type)}
+                        signed
+                        className="text-[0.9375rem] font-semibold"
+                      />
+                    )}
                   </div>
                   <RecurringRuleActions id={rule.id} active={rule.active} />
                 </li>
