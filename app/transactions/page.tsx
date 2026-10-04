@@ -1,9 +1,18 @@
+import type { Metadata } from 'next'
+import { ArrowLeftRightIcon, FileSpreadsheetIcon, FileTextIcon, SearchXIcon } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { formatCents } from '@/lib/money'
+import { formatDayHeading } from '@/lib/format'
+import { PageHeader, PageShell } from '@/components/page-header'
+import { EmptyState } from '@/components/empty-state'
+import { Amount } from '@/components/amount'
+import { CategoryBadge } from '@/components/category-type'
+import { Button } from '@/components/ui/button'
 import { NewTransactionDialog } from './new-transaction-dialog'
 import { DeleteTransactionButton } from './delete-transaction-button'
 import { TransactionFilters } from './transaction-filters'
 import { AttachmentDialog } from './attachment-dialog'
+
+export const metadata: Metadata = { title: 'Movimientos' }
 
 type TransactionRow = {
   id: string
@@ -12,7 +21,10 @@ type TransactionRow = {
   description: string | null
   transaction_date: string
   accounts: { name: string }[] | { name: string } | null
-  categories: { name: string; type: string }[] | { name: string; type: string } | null
+  categories:
+    | { name: string; type: string; icon: string | null }[]
+    | { name: string; type: string; icon: string | null }
+    | null
 }
 
 function first<T>(value: T[] | T | null): T | null {
@@ -48,7 +60,7 @@ export default async function TransactionsPage({
   let query = supabase
     .from('transactions')
     .select(
-      'id, amount_cents, currency, description, transaction_date, accounts(name), categories(name, type)'
+      'id, amount_cents, currency, description, transaction_date, accounts(name), categories(name, type, icon)'
     )
     .is('deleted_at', null)
     .order('transaction_date', { ascending: false })
@@ -66,64 +78,153 @@ export default async function TransactionsPage({
   ])
 
   const rows = (transactions ?? []) as TransactionRow[]
+  const hasFilters = Boolean(params.accountId || params.categoryId || params.from || params.to)
+
+  let inflow = 0
+  let outflow = 0
+  for (const t of rows) {
+    if (t.amount_cents >= 0) inflow += t.amount_cents
+    else outflow += t.amount_cents
+  }
+
+  // Agrupa por día manteniendo el orden descendente de la consulta.
+  const groups: { date: string; items: TransactionRow[]; total: number }[] = []
+  for (const t of rows) {
+    const last = groups[groups.length - 1]
+    if (last && last.date === t.transaction_date) {
+      last.items.push(t)
+      last.total += t.amount_cents
+    } else {
+      groups.push({ date: t.transaction_date, items: [t], total: t.amount_cents })
+    }
+  }
 
   return (
-    <main className="max-w-2xl mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Movimientos</h1>
-        <NewTransactionDialog accounts={accounts ?? []} categories={categories ?? []} />
-      </div>
-
-      <TransactionFilters
-        accounts={accounts ?? []}
-        categories={categories ?? []}
-        current={params}
+    <PageShell>
+      <PageHeader
+        title="Movimientos"
+        description={
+          rows.length === 1 ? '1 movimiento' : `${rows.length.toLocaleString('es-ES')} movimientos`
+        }
+        actions={<NewTransactionDialog accounts={accounts ?? []} categories={categories ?? []} />}
       />
 
-      <div className="flex gap-4 text-sm">
-        <a href={`/transactions/export?${buildExportQuery(params, 'xlsx')}`} className="underline">
-          Exportar a Excel
-        </a>
-        <a href={`/transactions/export?${buildExportQuery(params, 'pdf')}`} className="underline">
-          Exportar a PDF
-        </a>
+      <div className="space-y-3">
+        <TransactionFilters
+          accounts={accounts ?? []}
+          categories={categories ?? []}
+          current={params}
+          hasFilters={hasFilters}
+        />
+
+        {rows.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+            <dl className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+              <div className="flex items-baseline gap-2">
+                <dt className="text-muted-foreground">Entradas</dt>
+                <dd>
+                  <Amount cents={inflow} className="font-medium text-positive" />
+                </dd>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <dt className="text-muted-foreground">Salidas</dt>
+                <dd>
+                  <Amount cents={outflow} className="font-medium" />
+                </dd>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <dt className="text-muted-foreground">Neto</dt>
+                <dd>
+                  <Amount cents={inflow + outflow} signed className="font-semibold" />
+                </dd>
+              </div>
+            </dl>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <a href={`/transactions/export?${buildExportQuery(params, 'xlsx')}`}>
+                  <FileSpreadsheetIcon data-icon="inline-start" />
+                  Excel
+                </a>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <a href={`/transactions/export?${buildExportQuery(params, 'pdf')}`}>
+                  <FileTextIcon data-icon="inline-start" />
+                  PDF
+                </a>
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {rows.length === 0 ? (
-        <p className="text-muted-foreground">No hay movimientos que coincidan con el filtro.</p>
+        hasFilters ? (
+          <EmptyState
+            icon={SearchXIcon}
+            title="Ningún movimiento coincide"
+            description="Prueba a ampliar el rango de fechas o a quitar algún filtro."
+          />
+        ) : (
+          <EmptyState
+            icon={ArrowLeftRightIcon}
+            title="Aún no hay movimientos"
+            description="Registra tu primer ingreso o gasto y aparecerá aquí, agrupado por día."
+            action={
+              <NewTransactionDialog accounts={accounts ?? []} categories={categories ?? []} />
+            }
+          />
+        )
       ) : (
-        <div className="divide-y rounded-lg border">
-          {rows.map((t) => {
-            const account = first(t.accounts)
-            const category = first(t.categories)
-            return (
-              <div key={t.id} className="flex items-center justify-between p-4">
-                <div>
-                  <p className="font-medium">
-                    {t.description || category?.name || 'Sin descripción'}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {t.transaction_date} · {account?.name} · {category?.name}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span
-                    className={
-                      t.amount_cents >= 0
-                        ? 'text-green-600 font-medium'
-                        : 'text-red-600 font-medium'
-                    }
-                  >
-                    {formatCents(t.amount_cents, t.currency)}
-                  </span>
-                  <AttachmentDialog transactionId={t.id} />
-                  <DeleteTransactionButton id={t.id} />
-                </div>
+        <div className="space-y-6">
+          {groups.map((group) => (
+            <section key={group.date} aria-labelledby={`dia-${group.date}`}>
+              <div className="mb-2 flex items-baseline justify-between px-1">
+                <h2
+                  id={`dia-${group.date}`}
+                  className="text-[0.8125rem] font-medium text-muted-foreground first-letter:uppercase"
+                >
+                  {formatDayHeading(group.date)}
+                </h2>
+                <Amount cents={group.total} signed className="text-xs text-muted-foreground" />
               </div>
-            )
-          })}
+              <ul className="surface divide-y divide-border/70 overflow-hidden">
+                {group.items.map((t) => {
+                  const account = first(t.accounts)
+                  const category = first(t.categories)
+                  return (
+                    <li
+                      key={t.id}
+                      className="group flex items-center gap-3 py-3 pr-2 pl-3.5 transition-colors duration-150 hover:bg-muted/40 sm:pl-4"
+                    >
+                      <CategoryBadge type={category?.type} emoji={category?.icon} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[0.9375rem] font-medium">
+                          {t.description || category?.name || 'Sin descripción'}
+                        </p>
+                        <p className="truncate text-[0.8125rem] text-muted-foreground">
+                          {[t.description ? category?.name : null, account?.name]
+                            .filter(Boolean)
+                            .join(' · ') || 'Sin categoría'}
+                        </p>
+                      </div>
+                      <Amount
+                        cents={t.amount_cents}
+                        currency={t.currency}
+                        signed
+                        className="text-[0.9375rem] font-semibold"
+                      />
+                      <div className="flex items-center">
+                        <AttachmentDialog transactionId={t.id} />
+                        <DeleteTransactionButton id={t.id} />
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            </section>
+          ))}
         </div>
       )}
-    </main>
+    </PageShell>
   )
 }

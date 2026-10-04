@@ -2,13 +2,13 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Ingresos y Gastos',
-    short_name: 'IngresosGastos',
+    name: 'Finanzas Personales',
+    short_name: 'Finanzas',
     description: 'Gestión personal de ingresos, gastos e inversiones',
     start_url: '/',
     display: 'standalone',
-    background_color: '#ffffff',
-    theme_color: '#0f172a',
+    background_color: '#faf9f7',
+    theme_color: '#faf9f7',
     icons: [
       {
         src: '/icon-192x192.png',

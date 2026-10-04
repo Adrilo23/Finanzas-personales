@@ -1,26 +1,35 @@
 'use client'
 
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import {
-  categorySchema,
-  type CategoryInput,
-  CATEGORY_TYPE_LABELS,
-} from '@/lib/validation/category-schemas'
+import { PlusIcon } from 'lucide-react'
+import { categorySchema, type CategoryInput } from '@/lib/validation/category-schemas'
 import { createCategory } from './actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { NativeSelect } from '@/components/ui/native-select'
+import { Segmented } from '@/components/ui/segmented'
+import { Field, FieldError, FormError } from '@/components/ui/field'
+import { CATEGORY_TYPE_META } from '@/components/category-type'
 import {
   Dialog,
+  DialogClose,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
 
 type CategoryOption = { id: string; name: string; type: string; parent_id: string | null }
+
+const TYPE_OPTIONS = (['expense', 'income', 'investment'] as const).map((value) => ({
+  value,
+  label: CATEGORY_TYPE_META[value].label,
+}))
 
 export function NewCategoryDialog({ categories }: { categories: CategoryOption[] }) {
   const [open, setOpen] = useState(false)
@@ -29,14 +38,15 @@ export function NewCategoryDialog({ categories }: { categories: CategoryOption[]
     register,
     handleSubmit,
     reset,
-    watch,
+    control,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<CategoryInput>({
     resolver: zodResolver(categorySchema),
     defaultValues: { type: 'expense', parentId: '', icon: '' },
   })
 
-  const selectedType = watch('type')
+  const selectedType = useWatch({ control, name: 'type' })
   const possibleParents = categories.filter(
     (c) => c.type === selectedType && c.parent_id === null
   )
@@ -59,57 +69,92 @@ export function NewCategoryDialog({ categories }: { categories: CategoryOption[]
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next)
+        if (!next) setServerError(null)
+      }}
+    >
       <DialogTrigger asChild>
-        <Button>Nueva categoría</Button>
+        <Button>
+          <PlusIcon data-icon="inline-start" />
+          Nueva categoría
+        </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Nueva categoría</DialogTitle>
+          <DialogDescription>
+            El tipo decide si sus movimientos suman (ingreso) o restan (gasto e inversión).
+          </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="space-y-1">
-            <Label htmlFor="name">Nombre</Label>
-            <Input id="name" {...register('name')} />
-            {errors.name && <p className="text-sm text-red-500">{errors.name.message}</p>}
-          </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4" noValidate>
+          <Field>
+            <Label>Tipo</Label>
+            <Segmented
+              name="type"
+              aria-label="Tipo de categoría"
+              value={selectedType}
+              onValueChange={(value) => {
+                setValue('type', value)
+                setValue('parentId', '')
+              }}
+              options={TYPE_OPTIONS}
+            />
+          </Field>
 
-          <div className="space-y-1">
-            <Label htmlFor="type">Tipo</Label>
-            <select
-              id="type"
-              {...register('type')}
-              className="w-full rounded-md border px-3 py-2 text-sm"
-            >
-              {Object.entries(CATEGORY_TYPE_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
+          <div className="grid grid-cols-[4.5rem_1fr] gap-3">
+            <Field>
+              <Label htmlFor="icon">Icono</Label>
+              <Input
+                id="icon"
+                placeholder="🛒"
+                maxLength={10}
+                className="text-center text-lg"
+                aria-invalid={!!errors.icon}
+                {...register('icon')}
+              />
+            </Field>
+            <Field>
+              <Label htmlFor="name">Nombre</Label>
+              <Input
+                id="name"
+                placeholder="Ej. Supermercado"
+                autoFocus
+                aria-invalid={!!errors.name}
+                {...register('name')}
+              />
+            </Field>
           </div>
+          <FieldError className="-mt-2">{errors.name?.message ?? errors.icon?.message}</FieldError>
 
-          <div className="space-y-1">
-            <Label htmlFor="parentId">Categoría padre (opcional)</Label>
-            <select
-              id="parentId"
-              {...register('parentId')}
-              className="w-full rounded-md border px-3 py-2 text-sm"
-            >
-              <option value="">Ninguna (categoría de primer nivel)</option>
+          <Field>
+            <Label htmlFor="parentId">
+              Dentro de <span className="font-normal text-muted-foreground">(opcional)</span>
+            </Label>
+            <NativeSelect id="parentId" {...register('parentId')}>
+              <option value="">Ninguna — categoría principal</option>
               {possibleParents.map((parent) => (
                 <option key={parent.id} value={parent.id}>
                   {parent.name}
                 </option>
               ))}
-            </select>
-          </div>
+            </NativeSelect>
+          </Field>
 
-          {serverError && <p className="text-sm text-red-500">{serverError}</p>}
+          <FormError>{serverError}</FormError>
 
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? 'Guardando...' : 'Guardar'}
-          </Button>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">
+                Cancelar
+              </Button>
+            </DialogClose>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Guardando…' : 'Crear categoría'}
+            </Button>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

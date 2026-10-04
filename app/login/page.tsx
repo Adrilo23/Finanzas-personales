@@ -6,9 +6,11 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
 import { loginSchema, type LoginInput } from '@/lib/validation/auth-schemas'
 import { login } from './actions'
+import { AuthShell } from '@/components/auth-shell'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Field, FieldError, FormError } from '@/components/ui/field'
 
 export default function LoginPage() {
   const [serverError, setServerError] = useState<string | null>(null)
@@ -28,35 +30,54 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-4">
-      <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm space-y-4">
-        <h1 className="text-2xl font-semibold">Iniciar sesión</h1>
+    <AuthShell>
+      <div className="mb-8 space-y-1.5">
+        <h1 className="text-[1.75rem] font-semibold tracking-tight">Inicia sesión</h1>
+        <p className="text-sm text-muted-foreground">Accede para ver tus cuentas y movimientos.</p>
+      </div>
 
-        <div className="space-y-1">
+      <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4" noValidate>
+        <Field>
           <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" {...register('email')} />
-          {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
-        </div>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            placeholder="tu@email.com"
+            aria-invalid={!!errors.email}
+            {...register('email')}
+          />
+          <FieldError>{errors.email?.message}</FieldError>
+        </Field>
 
-        <div className="space-y-1">
+        <Field>
           <Label htmlFor="password">Contraseña</Label>
-          <Input id="password" type="password" {...register('password')} />
-          {errors.password && <p className="text-sm text-red-500">{errors.password.message}</p>}
-        </div>
+          <Input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            aria-invalid={!!errors.password}
+            {...register('password')}
+          />
+          <FieldError>{errors.password?.message}</FieldError>
+        </Field>
 
-        {serverError && <p className="text-sm text-red-500">{serverError}</p>}
+        <FormError>{serverError}</FormError>
 
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
-          {isSubmitting ? 'Entrando...' : 'Entrar'}
+        <Button type="submit" size="lg" className="mt-2 w-full" disabled={isSubmitting}>
+          {isSubmitting ? 'Entrando…' : 'Entrar'}
         </Button>
-
-        <p className="text-sm text-center text-muted-foreground">
-          ¿No tienes cuenta?{' '}
-          <Link href="/register" className="underline">
-            Regístrate
-          </Link>
-        </p>
       </form>
-    </main>
+
+      <p className="mt-8 text-center text-sm text-muted-foreground">
+        ¿No tienes cuenta?{' '}
+        <Link
+          href="/register"
+          className="font-medium text-foreground underline-offset-4 hover:underline"
+        >
+          Crea una
+        </Link>
+      </p>
+    </AuthShell>
   )
 }

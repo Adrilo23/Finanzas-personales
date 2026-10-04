@@ -1,24 +1,35 @@
 'use client'
 
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import {
-  accountSchema,
-  type AccountInput,
-  ACCOUNT_TYPE_LABELS,
-} from '@/lib/validation/account-schemas'
+import { PlusIcon } from 'lucide-react'
+import { accountSchema, type AccountInput } from '@/lib/validation/account-schemas'
+import { parseEurosInput } from '@/lib/money'
 import { createAccount } from './actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { AmountInput } from '@/components/ui/amount-input'
+import { Segmented } from '@/components/ui/segmented'
+import { Field, FieldError, FieldHint, FormError } from '@/components/ui/field'
 import {
   Dialog,
+  DialogClose,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+
+const TYPE_OPTIONS = [
+  { value: 'bank', label: 'Banco' },
+  { value: 'card', label: 'Tarjeta' },
+  { value: 'cash', label: 'Efectivo' },
+  { value: 'other', label: 'Otro' },
+] as const
 
 export function NewAccountDialog() {
   const [open, setOpen] = useState(false)
@@ -27,11 +38,15 @@ export function NewAccountDialog() {
     register,
     handleSubmit,
     reset,
+    control,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<AccountInput>({
     resolver: zodResolver(accountSchema),
-    defaultValues: { type: 'bank', currency: 'EUR', initialBalance: 0 },
+    defaultValues: { type: 'bank', currency: 'EUR' },
   })
+
+  const type = useWatch({ control, name: 'type' })
 
   const onSubmit = async (data: AccountInput) => {
     setServerError(null)
@@ -51,61 +66,71 @@ export function NewAccountDialog() {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next)
+        if (!next) setServerError(null)
+      }}
+    >
       <DialogTrigger asChild>
-        <Button>Nueva cuenta</Button>
+        <Button>
+          <PlusIcon data-icon="inline-start" />
+          Nueva cuenta
+        </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Nueva cuenta</DialogTitle>
+          <DialogDescription>El saldo se irá actualizando con cada movimiento.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="space-y-1">
+        <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4" noValidate>
+          <Field>
             <Label htmlFor="name">Nombre</Label>
-            <Input id="name" {...register('name')} />
-            {errors.name && <p className="text-sm text-red-500">{errors.name.message}</p>}
-          </div>
-
-          <div className="space-y-1">
-            <Label htmlFor="type">Tipo</Label>
-            <select
-              id="type"
-              {...register('type')}
-              className="w-full rounded-md border px-3 py-2 text-sm"
-            >
-              {Object.entries(ACCOUNT_TYPE_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="space-y-1">
-            <Label htmlFor="initialBalance">Saldo inicial (€)</Label>
             <Input
-              id="initialBalance"
-              type="text"
-              inputMode="decimal"
-              {...register('initialBalance', {
-                setValueAs: (v) => {
-                  if (typeof v === 'number') return v
-                  const normalized = String(v).replace(',', '.').trim()
-                  const num = parseFloat(normalized)
-                  return Number.isNaN(num) ? 0 : num
-                },
-              })}
+              id="name"
+              placeholder="Ej. Cuenta nómina"
+              autoFocus
+              aria-invalid={!!errors.name}
+              {...register('name')}
             />
-            {errors.initialBalance && (
-              <p className="text-sm text-red-500">{errors.initialBalance.message}</p>
-            )}
-          </div>
+            <FieldError>{errors.name?.message}</FieldError>
+          </Field>
 
-          {serverError && <p className="text-sm text-red-500">{serverError}</p>}
+          <Field>
+            <Label>Tipo</Label>
+            <Segmented
+              name="type"
+              aria-label="Tipo de cuenta"
+              value={type}
+              onValueChange={(value) => setValue('type', value)}
+              options={TYPE_OPTIONS}
+            />
+          </Field>
 
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? 'Guardando...' : 'Guardar'}
-          </Button>
+          <Field>
+            <Label htmlFor="initialBalance">Saldo inicial</Label>
+            <AmountInput
+              id="initialBalance"
+              aria-invalid={!!errors.initialBalance}
+              {...register('initialBalance', { setValueAs: parseEurosInput })}
+            />
+            <FieldHint>Lo que tiene la cuenta hoy, antes de registrar movimientos.</FieldHint>
+            <FieldError>{errors.initialBalance?.message}</FieldError>
+          </Field>
+
+          <FormError>{serverError}</FormError>
+
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">
+                Cancelar
+              </Button>
+            </DialogClose>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Guardando…' : 'Crear cuenta'}
+            </Button>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

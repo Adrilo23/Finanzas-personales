@@ -15,3 +15,10 @@ export function centsToEuros(cents: number): number {
 export function formatCents(cents: number, currency = 'EUR'): string {
   return new Intl.NumberFormat('es-ES', { style: 'currency', currency }).format(cents / 100)
 }
+
+/** Convierte lo que escribe el usuario ("12,50", "12.5") a euros. Vacío o inválido → 0. */
+export function parseEurosInput(value: unknown): number {
+  if (typeof value === 'number') return value
+  const num = parseFloat(String(value ?? '').replace(',', '.').trim())
+  return Number.isNaN(num) ? 0 : num
+}
