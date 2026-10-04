@@ -71,6 +71,7 @@ Idea surgida al usar la app: una cuenta como MyInvestor contiene fondos cuyo val
   - Traspasos recurrentes: nueva opción "Traspaso" en Recurrentes
   - Efectivo en las cuentas de inversión: las compras lo consumen y las ventas lo devuelven; las posiciones ya registradas se marcaron como "sin efectivo". El formulario de operación permite desmarcarlo para posiciones previas
 - [x] **Plan de aportación periódica** (migración `0009`): un traspaso recurrente con "Repartir en activos". En cada vencimiento genera, de forma atómica, el traspaso (p. ej. BBVA → My Investor 500 €), los traspasos a otras cuentas si un activo vive en otra (My Investor → Kraken 50 €) y una **compra pendiente** por activo con participaciones estimadas. Las pendientes se ven en el activo y en un aviso en el inicio, y se confirman con las participaciones reales del bróker
+- [x] **Editar reglas recurrentes y planes** (migración `0010`): botón de lápiz en cada regla. Se cambian importe, cuentas, categoría, frecuencia, próxima fecha y el reparto en activos; solo afecta a los próximos vencimientos. Los planes se guardan con la función atómica `update_recurring_transfer` (regla y reparto a la vez). Un movimiento no se convierte en traspaso ni al revés
 - [ ] Revisar la categoría `investment` cuando existan las transferencias: hasta entonces, lo registrado como gasto de inversión se deja como está
 
 ## Fase 4 — Pulido y preparación para portfolio/LinkedIn

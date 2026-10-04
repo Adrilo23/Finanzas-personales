@@ -173,7 +173,7 @@ PK `(user_id, symbol, price_date)`. Es por usuario porque la app lo rellena con 
 | amount_cents | bigint | `> 0`; la suma no puede superar el importe del traspaso (lo que sobra queda como efectivo) |
 | created_at | timestamptz | |
 
-`unique (rule_id, holding_id)`. La función `run_contribution_plan(p_rule_id, p_dates, p_next)` (atómica, `security invoker`) genera en cada vencimiento: el traspaso de la regla; un traspaso destino → cuenta del activo si el activo está en otra cuenta; y una compra pendiente por activo con participaciones = importe ÷ último precio. Al final adelanta `next_run_date`.
+`unique (rule_id, holding_id)`. La función `run_contribution_plan(p_rule_id, p_dates, p_next)` (atómica, `security invoker`) genera en cada vencimiento: el traspaso de la regla; un traspaso destino → cuenta del activo si el activo está en otra cuenta; y una compra pendiente por activo con participaciones = importe ÷ último precio. Al final adelanta `next_run_date`. Para editar un plan, `update_recurring_transfer(p_rule_id, …, p_allocations jsonb)` (migración `0010`, atómica) actualiza la regla, recalcula `anchor_day` y sustituye su reparto.
 
 ### subscriptions (reservada, futuro SaaS)
 Sin implementar; solo reservada en el diseño.

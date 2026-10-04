@@ -58,12 +58,14 @@ Cada sección (`app/accounts`, `app/categories`, `app/transactions`, `app/recurr
 ### Traspasos
 Un traspaso entre cuentas son dos filas de `transactions` con el mismo `transfer_id` y sin categoría (`lib/transfers.ts`). Al no tener categoría, todos los totales por tipo, los informes y los presupuestos los ignoran solos. En listas sin filtro de cuenta, oculta la pata de entrada (`isHiddenTransferLeg`) y no los cuentes como entradas ni salidas. Se editan con la RPC `update_transfer` y se borran ambas patas. `recurring_rules.to_account_id` convierte una regla en traspaso periódico.
 
-Un traspaso recurrente con filas en `recurring_allocations` es un **plan de aportación**: `processRecurringRules` delega todos los traspasos recurrentes en la RPC `run_contribution_plan` (atómica: traspasos, compras pendientes y nueva fecha). Las compras pendientes (`holding_operations.status = 'pending'`) se confirman con `confirmOperation`.
+Un traspaso recurrente con filas en `recurring_allocations` es un **plan de aportación**: `processRecurringRules` delega todos los traspasos recurrentes en la RPC `run_contribution_plan` (atómica: traspasos, compras pendientes y nueva fecha). Las compras pendientes (`holding_operations.status = 'pending'`) se confirman con `confirmOperation`. Las reglas se editan con `updateRecurringRule`; los traspasos y planes pasan por la RPC `update_recurring_transfer`, que sustituye regla y reparto a la vez.
 
 **Ojo con los embeds:** `recurring_rules` tiene dos FK a `accounts`, así que `accounts(name)` es ambiguo y PostgREST devuelve error; usa `accounts!recurring_rules_account_id_fkey(name)`. Revisa los embeds cada vez que añadas una segunda FK a una tabla.
 
 ### Movimientos recurrentes
 `lib/recurring.ts` → `processRecurringRules()` se ejecuta desde `components/app-nav.tsx` (montado en el layout) cada vez que se carga una página autenticada. Genera todas las transacciones que hayan vencido desde `next_run_date` (puede ser más de una por regla) y luego adelanta esa fecha. Las fechas las calcula `computeDueDates` usando `anchor_day` (día original de la regla), para que un día 31 no derive a 28 tras febrero. No hay cron: la generación ocurre de forma perezosa. La frecuencia `custom` existe en el esquema, pero se ignora.
+
+**Radix `asChild` y Server Components:** pasar como `trigger` un elemento creado en un Server Component a un diálogo cliente puede romper el SSR ("Primitive.button failed to slot"). Si falla, deja que el propio diálogo pinte su botón (ver `NewRecurringDialog` con `rule`).
 
 ### Relaciones embebidas de Supabase
 Los selects con joins (`categories(type)`, `accounts(name)`) pueden devolver un objeto o un array según los tipos. El patrón del proyecto es un helper local `first()` que normaliza ambos casos (está en `lib/recurring.ts`, `lib/reports.ts`, `lib/budgets.ts` y en la ruta de exportación).

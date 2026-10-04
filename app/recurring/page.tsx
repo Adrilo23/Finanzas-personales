@@ -1,13 +1,13 @@
 import type { Metadata } from 'next'
 import { RepeatIcon } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { FREQUENCY_LABELS } from '@/lib/validation/recurring-schemas'
+import { FREQUENCY_LABELS, type RecurringInput } from '@/lib/validation/recurring-schemas'
 import { formatShortDate } from '@/lib/format'
 import { applyCategorySign, formatCents } from '@/lib/money'
 import { PageHeader, PageShell } from '@/components/page-header'
 import { EmptyState } from '@/components/empty-state'
 import { Amount } from '@/components/amount'
-import { CategoryBadge, TransferBadge } from '@/components/category-type'
+import { CategoryBadge, TransferBadge, type CategoryType } from '@/components/category-type'
 import { cn } from '@/lib/utils'
 import { NewRecurringDialog } from './new-recurring-dialog'
 import { RecurringRuleActions } from './recurring-rule-actions'
@@ -21,6 +21,8 @@ type RuleRow = {
   next_run_date: string
   active: boolean
   to_account_id: string | null
+  account_id: string
+  category_id: string | null
   account: { name: string }[] | { name: string } | null
   to_account: { name: string }[] | { name: string } | null
   categories:
@@ -48,7 +50,7 @@ export default async function RecurringPage() {
       .from('recurring_rules')
       .select(
         // Dos relaciones con accounts (origen y destino de traspasos): hay que nombrarlas.
-        'id, amount_cents, frequency, next_run_date, active, to_account_id, account:accounts!recurring_rules_account_id_fkey(name), to_account:accounts!recurring_rules_to_account_id_fkey(name), categories(name, type, icon)'
+        'id, amount_cents, frequency, next_run_date, active, account_id, category_id, to_account_id, account:accounts!recurring_rules_account_id_fkey(name), to_account:accounts!recurring_rules_to_account_id_fkey(name), categories(name, type, icon)'
       )
       .order('next_run_date', { ascending: true }),
     supabase.from('accounts').select('id, name, type').order('created_at', { ascending: true }),
@@ -56,7 +58,7 @@ export default async function RecurringPage() {
     supabase.from('holdings').select('id, name, account_id').order('name', { ascending: true }),
     supabase
       .from('recurring_allocations')
-      .select('rule_id, amount_cents, holdings(name)')
+      .select('rule_id, holding_id, amount_cents, holdings(name)')
       .order('amount_cents', { ascending: false }),
   ])
 
@@ -67,10 +69,14 @@ export default async function RecurringPage() {
     accountId: h.account_id,
     accountName: accountName.get(h.account_id) ?? '',
   }))
-  const allocationsByRule = new Map<string, { name: string; cents: number }[]>()
+  const allocationsByRule = new Map<string, { holdingId: string; name: string; cents: number }[]>()
   for (const a of allocationRows ?? []) {
     const list = allocationsByRule.get(a.rule_id) ?? []
-    list.push({ name: first(a.holdings)?.name ?? 'Activo', cents: a.amount_cents })
+    list.push({
+      holdingId: a.holding_id,
+      name: first(a.holdings)?.name ?? 'Activo',
+      cents: a.amount_cents,
+    })
     allocationsByRule.set(a.rule_id, list)
   }
 
@@ -177,7 +183,30 @@ export default async function RecurringPage() {
                       />
                     )}
                   </div>
-                  <RecurringRuleActions id={rule.id} active={rule.active} />
+                  <div className="flex items-center">
+                    <NewRecurringDialog
+                      accounts={accounts ?? []}
+                      categories={categories ?? []}
+                      holdings={holdings}
+                      rule={{
+                        id: rule.id,
+                        kind: isTransfer
+                          ? 'transfer'
+                          : ((category?.type ?? 'expense') as CategoryType),
+                        accountId: rule.account_id,
+                        toAccountId: rule.to_account_id,
+                        categoryId: rule.category_id,
+                        amountCents: rule.amount_cents,
+                        frequency: rule.frequency as RecurringInput['frequency'],
+                        nextRunDate: rule.next_run_date,
+                        allocations: allocations.map((a) => ({
+                          holdingId: a.holdingId,
+                          amountCents: a.cents,
+                        })),
+                      }}
+                    />
+                    <RecurringRuleActions id={rule.id} active={rule.active} />
+                  </div>
                 </li>
               )
             })}

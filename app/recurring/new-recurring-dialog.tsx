@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { ArrowDownIcon, PlusIcon, XIcon } from 'lucide-react'
+import { ArrowDownIcon, PencilIcon, PlusIcon, XIcon } from 'lucide-react'
 import {
   recurringSchema,
   recurringTransferSchema,
@@ -11,9 +11,9 @@ import {
   type RecurringTransferInput,
   FREQUENCY_LABELS,
 } from '@/lib/validation/recurring-schemas'
-import { eurosToCents, formatCents, parseEurosInput } from '@/lib/money'
+import { centsToEuros, eurosToCents, formatCents, parseEurosInput } from '@/lib/money'
 import { unallocatedCents, validateAllocations } from '@/lib/allocations'
-import { createRecurringRule } from './actions'
+import { createRecurringRule, updateRecurringRule } from './actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -34,47 +34,80 @@ import {
 } from '@/components/ui/dialog'
 
 type AccountOption = { id: string; name: string; type?: string | null }
-export type HoldingOption = { id: string; name: string; accountId: string; accountName: string }
+export type HoldingOption = {
+  id: string
+  name: string
+  accountId: string
+  accountName: string
+}
 type CategoryOption = { id: string; name: string; type: string }
 type Kind = CategoryType | 'transfer'
 
-const KIND_OPTIONS: { value: Kind; label: string }[] = [
-  ...(['expense', 'income', 'investment'] as const).map((value) => ({
-    value: value as Kind,
-    label: CATEGORY_TYPE_META[value].label,
-  })),
-  { value: 'transfer', label: 'Traspaso' },
-]
+/** Regla existente que se abre en modo edición. */
+export type EditableRule = {
+  id: string
+  kind: Kind
+  accountId: string
+  toAccountId: string | null
+  categoryId: string | null
+  amountCents: number
+  frequency: RecurringInput['frequency']
+  nextRunDate: string
+  allocations: { holdingId: string; amountCents: number }[]
+}
+
+const MOVEMENT_KIND_OPTIONS: { value: Kind; label: string }[] = (
+  ['expense', 'income', 'investment'] as const
+).map((value) => ({ value, label: CATEGORY_TYPE_META[value].label }))
+
+const KIND_OPTIONS = [...MOVEMENT_KIND_OPTIONS, { value: 'transfer' as Kind, label: 'Traspaso' }]
 
 function todayISO() {
   const now = new Date()
   return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
 }
 
+/** Importe en céntimos como texto editable ("325,00"). */
+function centsToInput(cents: number) {
+  return centsToEuros(cents).toLocaleString('es-ES', {
+    minimumFractionDigits: 2,
+    useGrouping: false,
+  })
+}
+
+/** Diálogo de alta de reglas recurrentes; con `rule`, edita esa regla (botón de lápiz). */
 export function NewRecurringDialog({
   accounts,
   categories,
   holdings = [],
+  rule,
 }: {
   accounts: AccountOption[]
   categories: CategoryOption[]
   holdings?: HoldingOption[]
+  rule?: EditableRule
 }) {
   const [open, setOpen] = useState(false)
-  const [kind, setKind] = useState<Kind>('expense')
+  const [kind, setKind] = useState<Kind>(rule?.kind ?? 'expense')
   const [formKey, setFormKey] = useState(0)
 
+  const editing = Boolean(rule)
   const disabled = accounts.length === 0
   const close = () => setOpen(false)
-  const selector = (
-    <Segmented
-      name="kind"
-      aria-label="Tipo de regla"
-      value={kind}
-      onValueChange={setKind}
-      options={KIND_OPTIONS}
-    />
-  )
+  // Al editar, un movimiento puede cambiar de tipo, pero no convertirse en traspaso
+  // (ni al revés): son reglas distintas.
+  const options = editing ? MOVEMENT_KIND_OPTIONS : KIND_OPTIONS
+  const selector =
+    editing && kind === 'transfer' ? null : (
+      <Segmented
+        name="kind"
+        aria-label="Tipo de regla"
+        value={kind}
+        onValueChange={setKind}
+        options={options}
+      />
+    )
+  const isPlan = (rule?.allocations.length ?? 0) > 0
 
   return (
     <Dialog
@@ -82,26 +115,48 @@ export function NewRecurringDialog({
       onOpenChange={(next) => {
         setOpen(next)
         if (next) {
-          setKind('expense')
+          setKind(rule?.kind ?? 'expense')
           setFormKey((k) => k + 1)
         }
       }}
     >
       <DialogTrigger asChild>
-        <Button disabled={disabled} title={disabled ? 'Crea antes una cuenta' : undefined}>
-          <PlusIcon data-icon="inline-start" />
-          Nueva regla
-        </Button>
+        {editing ? (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Editar regla"
+            title="Editar"
+            className="text-muted-foreground"
+          >
+            <PencilIcon />
+          </Button>
+        ) : (
+          <Button disabled={disabled} title={disabled ? 'Crea antes una cuenta' : undefined}>
+            <PlusIcon data-icon="inline-start" />
+            Nueva regla
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {kind === 'transfer' ? 'Nuevo traspaso recurrente' : 'Nueva regla recurrente'}
+            {editing
+              ? kind === 'transfer'
+                ? isPlan
+                  ? 'Editar plan de aportación'
+                  : 'Editar traspaso recurrente'
+                : 'Editar regla recurrente'
+              : kind === 'transfer'
+                ? 'Nuevo traspaso recurrente'
+                : 'Nueva regla recurrente'}
           </DialogTitle>
           <DialogDescription>
-            {kind === 'transfer'
-              ? 'Se moverá el dinero entre tus cuentas en cada vencimiento, sin contar como gasto.'
-              : 'Se añadirá un movimiento en cada vencimiento, empezando por la primera fecha.'}
+            {editing
+              ? 'Los cambios se aplican a los próximos vencimientos. Lo ya registrado no cambia.'
+              : kind === 'transfer'
+                ? 'Se moverá el dinero entre tus cuentas en cada vencimiento, sin contar como gasto.'
+                : 'Se añadirá un movimiento en cada vencimiento, empezando por la primera fecha.'}
           </DialogDescription>
         </DialogHeader>
         {kind === 'transfer' ? (
@@ -109,6 +164,7 @@ export function NewRecurringDialog({
             key={`t${formKey}`}
             accounts={accounts}
             holdings={holdings}
+            rule={rule}
             selector={selector}
             onDone={close}
           />
@@ -118,6 +174,7 @@ export function NewRecurringDialog({
             kind={kind}
             accounts={accounts}
             categories={categories}
+            rule={rule}
             selector={selector}
             onDone={close}
           />
@@ -130,11 +187,16 @@ export function NewRecurringDialog({
 function FrequencyAndDate({
   register,
   dateError,
+  dateValue,
+  editing,
 }: {
   // register de cualquiera de los dos formularios (comparten estos campos).
   register: (name: 'frequency' | 'nextRunDate') => object
   dateError?: string
+  dateValue?: string
+  editing: boolean
 }) {
+  const inPast = Boolean(dateValue) && dateValue! < todayISO()
   return (
     <>
       <Field>
@@ -148,10 +210,15 @@ function FrequencyAndDate({
         </NativeSelect>
       </Field>
       <Field>
-        <Label htmlFor="nextRunDate">Primera fecha</Label>
+        <Label htmlFor="nextRunDate">{editing ? 'Próxima fecha' : 'Primera fecha'}</Label>
         <Input id="nextRunDate" type="date" {...register('nextRunDate')} />
         <FieldError>{dateError}</FieldError>
       </Field>
+      {inPast && !dateError && (
+        <p className="text-xs text-muted-foreground sm:col-span-2">
+          Es una fecha pasada: al guardar se registrarán los vencimientos desde ese día hasta hoy.
+        </p>
+      )}
     </>
   )
 }
@@ -175,12 +242,14 @@ function MovementRuleForm({
   kind,
   accounts,
   categories,
+  rule,
   selector,
   onDone,
 }: {
   kind: CategoryType
   accounts: AccountOption[]
   categories: CategoryOption[]
+  rule?: EditableRule
   selector: React.ReactNode
   onDone: () => void
 }) {
@@ -190,16 +259,28 @@ function MovementRuleForm({
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<RecurringInput>({
     resolver: zodResolver(recurringSchema),
-    defaultValues: {
-      accountId: accounts[0]?.id ?? '',
-      categoryId: visibleCategories[0]?.id ?? '',
-      frequency: 'monthly',
-      nextRunDate: todayISO(),
-    },
+    defaultValues: rule
+      ? {
+          accountId: rule.accountId,
+          categoryId: visibleCategories.some((c) => c.id === rule.categoryId)
+            ? (rule.categoryId ?? '')
+            : (visibleCategories[0]?.id ?? ''),
+          amount: centsToEuros(rule.amountCents),
+          frequency: rule.frequency,
+          nextRunDate: rule.nextRunDate,
+        }
+      : {
+          accountId: accounts[0]?.id ?? '',
+          categoryId: visibleCategories[0]?.id ?? '',
+          frequency: 'monthly',
+          nextRunDate: todayISO(),
+        },
   })
+  const nextRunDate = useWatch({ control, name: 'nextRunDate' })
 
   const onSubmit = async (data: RecurringInput) => {
     setServerError(null)
@@ -215,7 +296,9 @@ function MovementRuleForm({
     formData.set('frequency', data.frequency)
     formData.set('nextRunDate', data.nextRunDate)
 
-    const result = await createRecurringRule(formData)
+    const result = rule
+      ? await updateRecurringRule(rule.id, formData)
+      : await createRecurringRule(formData)
     if (result?.error) {
       setServerError(result.error)
       return
@@ -233,7 +316,7 @@ function MovementRuleForm({
         </Label>
         <AmountInput
           id="amount"
-          autoFocus
+          autoFocus={!rule}
           aria-invalid={!!errors.amount}
           {...register('amount', { setValueAs: parseEurosInput })}
         />
@@ -271,11 +354,16 @@ function MovementRuleForm({
           </NativeSelect>
         </Field>
 
-        <FrequencyAndDate register={register} dateError={errors.nextRunDate?.message} />
+        <FrequencyAndDate
+          register={register}
+          dateError={errors.nextRunDate?.message}
+          dateValue={nextRunDate}
+          editing={Boolean(rule)}
+        />
       </div>
 
       <FormError>{serverError}</FormError>
-      <Footer submitting={isSubmitting} label="Crear regla" />
+      <Footer submitting={isSubmitting} label={rule ? 'Guardar cambios' : 'Crear regla'} />
     </form>
   )
 }
@@ -285,16 +373,24 @@ type AllocationLine = { key: number; holdingId: string; amount: string }
 function TransferRuleForm({
   accounts,
   holdings,
+  rule,
   selector,
   onDone,
 }: {
   accounts: AccountOption[]
   holdings: HoldingOption[]
+  rule?: EditableRule
   selector: React.ReactNode
   onDone: () => void
 }) {
   const [serverError, setServerError] = useState<string | null>(null)
-  const [lines, setLines] = useState<AllocationLine[]>([])
+  const [lines, setLines] = useState<AllocationLine[]>(() =>
+    (rule?.allocations ?? []).map((a, i) => ({
+      key: i + 1,
+      holdingId: a.holdingId,
+      amount: centsToInput(a.amountCents),
+    }))
+  )
 
   const {
     register,
@@ -303,16 +399,25 @@ function TransferRuleForm({
     formState: { errors, isSubmitting },
   } = useForm<RecurringTransferInput>({
     resolver: zodResolver(recurringTransferSchema),
-    defaultValues: {
-      fromAccountId: accounts[0]?.id ?? '',
-      toAccountId: accounts[1]?.id ?? '',
-      frequency: 'monthly',
-      nextRunDate: todayISO(),
-    },
+    defaultValues: rule
+      ? {
+          fromAccountId: rule.accountId,
+          toAccountId: rule.toAccountId ?? '',
+          amount: centsToEuros(rule.amountCents),
+          frequency: rule.frequency,
+          nextRunDate: rule.nextRunDate,
+        }
+      : {
+          fromAccountId: accounts[0]?.id ?? '',
+          toAccountId: accounts[1]?.id ?? '',
+          frequency: 'monthly',
+          nextRunDate: todayISO(),
+        },
   })
 
   const toAccountId = useWatch({ control, name: 'toAccountId' })
   const amount = useWatch({ control, name: 'amount' })
+  const nextRunDate = useWatch({ control, name: 'nextRunDate' })
   const destination = accounts.find((a) => a.id === toAccountId)
   const canAllocate = destination?.type === 'investment' && holdings.length > 0
   const activeLines = canAllocate ? lines : []
@@ -339,7 +444,10 @@ function TransferRuleForm({
     formData.set(
       'allocations',
       JSON.stringify(
-        activeLines.map((l) => ({ holdingId: l.holdingId, amount: parseEurosInput(l.amount) }))
+        activeLines.map((l) => ({
+          holdingId: l.holdingId,
+          amount: parseEurosInput(l.amount),
+        }))
       )
     )
     formData.set('fromAccountId', data.fromAccountId)
@@ -348,7 +456,9 @@ function TransferRuleForm({
     formData.set('frequency', data.frequency)
     formData.set('nextRunDate', data.nextRunDate)
 
-    const result = await createRecurringRule(formData)
+    const result = rule
+      ? await updateRecurringRule(rule.id, formData)
+      : await createRecurringRule(formData)
     if (result?.error) {
       setServerError(result.error)
       return
@@ -383,7 +493,7 @@ function TransferRuleForm({
         </Label>
         <AmountInput
           id="transfer-amount"
-          autoFocus
+          autoFocus={!rule}
           aria-invalid={!!errors.amount}
           {...register('amount', { setValueAs: parseEurosInput })}
         />
@@ -493,7 +603,11 @@ function TransferRuleForm({
               setLines((current) => [
                 ...current,
                 // Clave única y estable: siguiente número tras la mayor existente.
-                { key: Math.max(0, ...current.map((l) => l.key)) + 1, holdingId: '', amount: '' },
+                {
+                  key: Math.max(0, ...current.map((l) => l.key)) + 1,
+                  holdingId: '',
+                  amount: '',
+                },
               ])
             }
           >
@@ -508,13 +622,24 @@ function TransferRuleForm({
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <FrequencyAndDate register={register} dateError={errors.nextRunDate?.message} />
+        <FrequencyAndDate
+          register={register}
+          dateError={errors.nextRunDate?.message}
+          dateValue={nextRunDate}
+          editing={Boolean(rule)}
+        />
       </div>
 
       <FormError>{serverError}</FormError>
       <Footer
         submitting={isSubmitting}
-        label={activeLines.length > 0 ? 'Crear plan de aportación' : 'Crear traspaso'}
+        label={
+          rule
+            ? 'Guardar cambios'
+            : activeLines.length > 0
+              ? 'Crear plan de aportación'
+              : 'Crear traspaso'
+        }
       />
     </form>
   )

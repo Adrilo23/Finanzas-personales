@@ -555,6 +555,18 @@ export type Database = {
         Args: { p_dates: string[]; p_next: string; p_rule_id: string }
         Returns: undefined
       }
+      update_recurring_transfer: {
+        Args: {
+          p_allocations: Json
+          p_amount_cents: number
+          p_frequency: string
+          p_from_account: string
+          p_next_run_date: string
+          p_rule_id: string
+          p_to_account: string
+        }
+        Returns: undefined
+      }
       update_transfer: {
         Args: {
           p_amount_cents: number
