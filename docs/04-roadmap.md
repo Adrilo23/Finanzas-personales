@@ -54,7 +54,8 @@ Idea surgida al usar la app: una aportación a un fondo no es un gasto, es diner
   - Uso personal/amigos: fuente gratuita (p. ej. API no oficial de Yahoo), asumiendo que puede fallar
   - **Antes de vender: proveedor de datos con licencia comercial** (redistribuir precios a clientes lo exige)
   - Excepción a "todo con anon key + RLS": la tarea usa la service role key solo en servidor; la tabla de precios no tiene datos personales y los usuarios solo la leen
-  - Pendiente: confirmar que los ISIN de los fondos de Adrián (MSCI World, Amundi Emergentes) están cubiertos por la fuente elegida
+  - Cobertura comprobada en Yahoo (2026-10-04), los tres en EUR y con valor liquidativo diario (desfase normal de 1 día hábil): Fidelity MSCI World Index P-Acc (`IE00BYX5NX33` → `0P0001CLDK.F`), Amundi IS Core MSCI Emerging Markets IE-C (`LU0996175948` → `0P00011MU2.F`) y Groupama Trésorerie IC (`FR0000989626` → `0P00000LRT.F`)
+  - Participaciones con decimales (`numeric`, no `bigint`): un fondo como Groupama Trésorerie vale ~44.600 € por participación. El valor (participaciones × precio) se calcula en SQL con `numeric` y se redondea a céntimos, nunca con float en JS
 
 ## Fase 4 — Pulido y preparación para portfolio/LinkedIn
 - [x] Diseño UI cuidado (no solo funcional) — rediseño completo: sistema de tokens (modo claro/oscuro), navegación con barra inferior en móvil, formularios nuevos, estados vacíos y de carga, gráfica accesible
