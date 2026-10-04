@@ -1,11 +1,43 @@
 import type { Metadata } from 'next'
-import { TagIcon } from 'lucide-react'
+import { PencilIcon, TagIcon } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader, PageShell } from '@/components/page-header'
 import { EmptyState } from '@/components/empty-state'
 import { CATEGORY_TYPE_META, CategoryBadge, type CategoryType } from '@/components/category-type'
 import { NewCategoryDialog } from './new-category-dialog'
 import { DeleteCategoryButton } from './delete-category-button'
+
+function EditCategoryButton({
+  category,
+  categories,
+}: {
+  category: Category
+  categories: Category[]
+}) {
+  return (
+    <NewCategoryDialog
+      categories={categories}
+      category={{
+        id: category.id,
+        name: category.name,
+        type: category.type,
+        parentId: category.parent_id,
+        icon: category.icon,
+      }}
+      trigger={
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={`Editar categoría ${category.name}`}
+          className="text-muted-foreground/70"
+        >
+          <PencilIcon />
+        </Button>
+      }
+    />
+  )
+}
 
 export const metadata: Metadata = { title: 'Categorías' }
 
@@ -75,6 +107,7 @@ export default async function CategoriesPage() {
                             <p className="min-w-0 flex-1 truncate text-[0.9375rem] font-medium">
                               {parent.name}
                             </p>
+                            <EditCategoryButton category={parent} categories={categories} />
                             <DeleteCategoryButton id={parent.id} name={parent.name} />
                           </div>
                           {children.length > 0 && (
@@ -89,6 +122,7 @@ export default async function CategoriesPage() {
                                     {child.icon ? `${child.icon} ` : ''}
                                     {child.name}
                                   </span>
+                                  <EditCategoryButton category={child} categories={categories} />
                                   <DeleteCategoryButton id={child.id} name={child.name} />
                                 </li>
                               ))}

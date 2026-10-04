@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
-import { WalletIcon } from 'lucide-react'
+import { PencilIcon, WalletIcon } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { ACCOUNT_TYPE_LABELS } from '@/lib/validation/account-schemas'
+import { ACCOUNT_TYPE_LABELS, type AccountInput } from '@/lib/validation/account-schemas'
+import { Button } from '@/components/ui/button'
 import { PageHeader, PageShell } from '@/components/page-header'
 import { EmptyState } from '@/components/empty-state'
 import { Amount } from '@/components/amount'
@@ -65,7 +66,28 @@ export default async function AccountsPage() {
                         'Otro'}
                     </p>
                   </div>
-                  <DeleteAccountButton id={account.id!} name={account.name ?? ''} />
+                  <div className="flex">
+                    <NewAccountDialog
+                      account={{
+                        id: account.id!,
+                        name: account.name ?? '',
+                        type: (account.type ?? 'other') as AccountInput['type'],
+                        currency: account.currency ?? 'EUR',
+                        initialBalanceCents: account.initial_balance_cents ?? 0,
+                      }}
+                      trigger={
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`Editar cuenta ${account.name}`}
+                          className="-mt-1 text-muted-foreground"
+                        >
+                          <PencilIcon />
+                        </Button>
+                      }
+                    />
+                    <DeleteAccountButton id={account.id!} name={account.name ?? ''} />
+                  </div>
                 </div>
                 <div className="flex items-end justify-between gap-3">
                   <Amount

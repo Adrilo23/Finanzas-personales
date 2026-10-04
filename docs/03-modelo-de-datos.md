@@ -135,7 +135,7 @@ categories 1───1 budgets (opcional)
 | Diseño inicial | Implementado | Motivo |
 |---|---|---|
 | `categories.type`: `income`, `expense` | añade `investment` | separar la inversión del gasto en totales y gráficas |
-| Movimientos inmutables y corrección con ajustes, o edición auditada (a decidir) | borrado lógico directo; **sin edición** por ahora | decisión pendiente (ver roadmap) |
+| Movimientos inmutables y corrección con ajustes, o edición auditada (a decidir) | edición directa + borrado lógico; `updated_at` por trigger | uso personal; la auditoría se deja para SaaS |
 | Signo en `amount_cents` o campo `type` aparte (a decidir) | signo en `amount_cents`, derivado de la categoría | |
 | `attachments` sin `user_id` ni `file_name` | con `user_id` (para RLS) y `file_name` | RLS directa y mostrar el nombre original |
 | `transactions.account_id` sin acción definida | `restrict` en `0001` → `cascade` en `0004` | poder borrar una cuenta con su historial |

@@ -5,8 +5,8 @@ import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { PlusIcon } from 'lucide-react'
 import { accountSchema, type AccountInput } from '@/lib/validation/account-schemas'
-import { parseEurosInput } from '@/lib/money'
-import { createAccount } from './actions'
+import { centsToEuros, parseEurosInput } from '@/lib/money'
+import { createAccount, updateAccount } from './actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -31,7 +31,30 @@ const TYPE_OPTIONS = [
   { value: 'other', label: 'Otro' },
 ] as const
 
-export function NewAccountDialog() {
+export type EditableAccount = {
+  id: string
+  name: string
+  type: AccountInput['type']
+  currency: string
+  initialBalanceCents: number
+}
+
+/** Diálogo de alta de cuentas; con `account`, edita esa cuenta. */
+export function NewAccountDialog({
+  account,
+  trigger,
+}: { account?: EditableAccount; trigger?: React.ReactNode } = {}) {
+  const editing = Boolean(account)
+  const initialValues = (): Partial<AccountInput> =>
+    account
+      ? {
+          name: account.name,
+          type: account.type,
+          currency: account.currency,
+          initialBalance: centsToEuros(account.initialBalanceCents),
+        }
+      : { type: 'bank', currency: 'EUR' }
+
   const [open, setOpen] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
   const {
@@ -43,7 +66,7 @@ export function NewAccountDialog() {
     formState: { errors, isSubmitting },
   } = useForm<AccountInput>({
     resolver: zodResolver(accountSchema),
-    defaultValues: { type: 'bank', currency: 'EUR' },
+    defaultValues: initialValues(),
   })
 
   const type = useWatch({ control, name: 'type' })
@@ -56,12 +79,14 @@ export function NewAccountDialog() {
     formData.set('currency', data.currency)
     formData.set('initialBalance', String(data.initialBalance))
 
-    const result = await createAccount(formData)
+    const result = account
+      ? await updateAccount(account.id, formData)
+      : await createAccount(formData)
     if (result?.error) {
       setServerError(result.error)
       return
     }
-    reset()
+    if (!account) reset()
     setOpen(false)
   }
 
@@ -71,18 +96,25 @@ export function NewAccountDialog() {
       onOpenChange={(next) => {
         setOpen(next)
         if (!next) setServerError(null)
+        if (next && account) reset(initialValues())
       }}
     >
       <DialogTrigger asChild>
-        <Button>
-          <PlusIcon data-icon="inline-start" />
-          Nueva cuenta
-        </Button>
+        {trigger ?? (
+          <Button>
+            <PlusIcon data-icon="inline-start" />
+            Nueva cuenta
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Nueva cuenta</DialogTitle>
-          <DialogDescription>El saldo se irá actualizando con cada movimiento.</DialogDescription>
+          <DialogTitle>{editing ? 'Editar cuenta' : 'Nueva cuenta'}</DialogTitle>
+          <DialogDescription>
+            {editing
+              ? 'Cambiar el saldo inicial recalcula el saldo actual con todos sus movimientos.'
+              : 'El saldo se irá actualizando con cada movimiento.'}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4" noValidate>
           <Field>
@@ -90,7 +122,7 @@ export function NewAccountDialog() {
             <Input
               id="name"
               placeholder="Ej. Cuenta nómina"
-              autoFocus
+              autoFocus={!editing}
               aria-invalid={!!errors.name}
               {...register('name')}
             />
@@ -128,7 +160,7 @@ export function NewAccountDialog() {
               </Button>
             </DialogClose>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Guardando…' : 'Crear cuenta'}
+              {isSubmitting ? 'Guardando…' : editing ? 'Guardar cambios' : 'Crear cuenta'}
             </Button>
           </DialogFooter>
         </form>

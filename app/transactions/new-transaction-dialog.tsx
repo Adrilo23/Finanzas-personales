@@ -5,8 +5,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { PlusIcon } from 'lucide-react'
 import { transactionSchema, type TransactionInput } from '@/lib/validation/transaction-schemas'
-import { parseEurosInput } from '@/lib/money'
-import { createTransaction } from './actions'
+import { centsToEuros, parseEurosInput } from '@/lib/money'
+import { createTransaction, updateTransaction } from './actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -14,7 +14,7 @@ import { NativeSelect } from '@/components/ui/native-select'
 import { AmountInput } from '@/components/ui/amount-input'
 import { Segmented } from '@/components/ui/segmented'
 import { Field, FieldError, FormError } from '@/components/ui/field'
-import { CATEGORY_TYPE_META, type CategoryType } from '@/components/category-type'
+import { CATEGORY_TYPE_META, isCategoryType, type CategoryType } from '@/components/category-type'
 import {
   Dialog,
   DialogClose,
@@ -39,21 +39,57 @@ function todayISO() {
   return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
 }
 
+/** Datos de un movimiento existente para editarlo. `amountCents` con signo, tal cual en BD. */
+export type EditableTransaction = {
+  id: string
+  accountId: string
+  categoryId: string | null
+  categoryType: string | null
+  amountCents: number
+  description: string | null
+  transactionDate: string
+}
+
+/** Diálogo de alta de movimientos; con `transaction`, edita ese movimiento. */
 export function NewTransactionDialog({
   accounts,
   categories,
   size = 'default',
+  transaction,
+  trigger,
 }: {
   accounts: AccountOption[]
   categories: CategoryOption[]
   size?: 'default' | 'sm'
+  transaction?: EditableTransaction
+  trigger?: React.ReactNode
 }) {
+  const editing = Boolean(transaction)
+  const initialKind: CategoryType =
+    transaction && isCategoryType(transaction.categoryType) ? transaction.categoryType : 'expense'
+
   const [open, setOpen] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
-  const [kind, setKind] = useState<CategoryType>('expense')
+  const [kind, setKind] = useState<CategoryType>(initialKind)
 
   const categoriesOf = (type: CategoryType) => categories.filter((c) => c.type === type)
   const visibleCategories = categoriesOf(kind)
+
+  const initialValues = (): Partial<TransactionInput> =>
+    transaction
+      ? {
+          accountId: transaction.accountId,
+          categoryId: transaction.categoryId ?? categoriesOf(initialKind)[0]?.id ?? '',
+          amount: centsToEuros(Math.abs(transaction.amountCents)),
+          description: transaction.description ?? '',
+          transactionDate: transaction.transactionDate,
+        }
+      : {
+          accountId: accounts[0]?.id ?? '',
+          categoryId: categoriesOf('expense')[0]?.id ?? '',
+          description: '',
+          transactionDate: todayISO(),
+        }
 
   const {
     register,
@@ -63,12 +99,7 @@ export function NewTransactionDialog({
     formState: { errors, isSubmitting },
   } = useForm<TransactionInput>({
     resolver: zodResolver(transactionSchema),
-    defaultValues: {
-      accountId: accounts[0]?.id ?? '',
-      categoryId: categoriesOf('expense')[0]?.id ?? '',
-      description: '',
-      transactionDate: todayISO(),
-    },
+    defaultValues: initialValues(),
   })
 
   const changeKind = (next: CategoryType) => {
@@ -85,18 +116,21 @@ export function NewTransactionDialog({
     formData.set('description', data.description ?? '')
     formData.set('transactionDate', data.transactionDate)
 
-    const result = await createTransaction(formData)
+    const result = transaction
+      ? await updateTransaction(transaction.id, formData)
+      : await createTransaction(formData)
     if (result?.error) {
       setServerError(result.error)
       return
     }
+    setOpen(false)
+    if (transaction) return
     reset({
       accountId: data.accountId,
       categoryId: categoriesOf(kind)[0]?.id ?? '',
       description: '',
       transactionDate: todayISO(),
     })
-    setOpen(false)
   }
 
   const disabled = accounts.length === 0 || categories.length === 0
@@ -107,21 +141,28 @@ export function NewTransactionDialog({
       onOpenChange={(next) => {
         setOpen(next)
         if (!next) setServerError(null)
+        // Al abrir para editar, parte siempre de los datos guardados.
+        if (next && transaction) {
+          setKind(initialKind)
+          reset(initialValues())
+        }
       }}
     >
       <DialogTrigger asChild>
-        <Button
-          size={size}
-          disabled={disabled}
-          title={disabled ? 'Crea antes una cuenta y una categoría' : undefined}
-        >
-          <PlusIcon data-icon="inline-start" />
-          Nuevo movimiento
-        </Button>
+        {trigger ?? (
+          <Button
+            size={size}
+            disabled={disabled}
+            title={disabled ? 'Crea antes una cuenta y una categoría' : undefined}
+          >
+            <PlusIcon data-icon="inline-start" />
+            Nuevo movimiento
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Nuevo movimiento</DialogTitle>
+          <DialogTitle>{editing ? 'Editar movimiento' : 'Nuevo movimiento'}</DialogTitle>
           <DialogDescription>
             Escribe el importe en positivo: el signo lo pone el tipo.
           </DialogDescription>
@@ -142,7 +183,7 @@ export function NewTransactionDialog({
             </Label>
             <AmountInput
               id="amount"
-              autoFocus
+              autoFocus={!editing}
               aria-invalid={!!errors.amount}
               {...register('amount', { setValueAs: parseEurosInput })}
             />
@@ -193,7 +234,11 @@ export function NewTransactionDialog({
               <Label htmlFor="description">
                 Descripción <span className="font-normal text-muted-foreground">(opcional)</span>
               </Label>
-              <Input id="description" placeholder="Ej. Compra semanal" {...register('description')} />
+              <Input
+                id="description"
+                placeholder="Ej. Compra semanal"
+                {...register('description')}
+              />
             </Field>
           </div>
 
@@ -206,7 +251,7 @@ export function NewTransactionDialog({
               </Button>
             </DialogClose>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Guardando…' : 'Guardar movimiento'}
+              {isSubmitting ? 'Guardando…' : editing ? 'Guardar cambios' : 'Guardar movimiento'}
             </Button>
           </DialogFooter>
         </form>

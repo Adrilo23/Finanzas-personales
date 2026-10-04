@@ -16,6 +16,8 @@ export const metadata: Metadata = { title: 'Movimientos' }
 
 type TransactionRow = {
   id: string
+  account_id: string
+  category_id: string | null
   amount_cents: number
   currency: string
   description: string | null
@@ -60,7 +62,7 @@ export default async function TransactionsPage({
   let query = supabase
     .from('transactions')
     .select(
-      'id, amount_cents, currency, description, transaction_date, accounts(name), categories(name, type, icon)'
+      'id, account_id, category_id, amount_cents, currency, description, transaction_date, accounts(name), categories(name, type, icon)'
     )
     .is('deleted_at', null)
     .order('transaction_date', { ascending: false })
@@ -194,24 +196,46 @@ export default async function TransactionsPage({
                   return (
                     <li
                       key={t.id}
-                      className="group flex items-center gap-3 py-3 pr-2 pl-3.5 transition-colors duration-150 hover:bg-muted/40 sm:pl-4"
+                      className="flex items-center gap-1 pr-2 transition-colors duration-150 hover:bg-muted/40"
                     >
-                      <CategoryBadge type={category?.type} emoji={category?.icon} />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[0.9375rem] font-medium">
-                          {t.description || category?.name || 'Sin descripción'}
-                        </p>
-                        <p className="truncate text-[0.8125rem] text-muted-foreground">
-                          {[t.description ? category?.name : null, account?.name]
-                            .filter(Boolean)
-                            .join(' · ') || 'Sin categoría'}
-                        </p>
-                      </div>
-                      <Amount
-                        cents={t.amount_cents}
-                        currency={t.currency}
-                        signed
-                        className="text-[0.9375rem] font-semibold"
+                      {/* Toda la fila abre la edición; adjuntos y borrar quedan aparte. */}
+                      <NewTransactionDialog
+                        accounts={accounts ?? []}
+                        categories={categories ?? []}
+                        transaction={{
+                          id: t.id,
+                          accountId: t.account_id,
+                          categoryId: t.category_id,
+                          categoryType: category?.type ?? null,
+                          amountCents: t.amount_cents,
+                          description: t.description,
+                          transactionDate: t.transaction_date,
+                        }}
+                        trigger={
+                          <button
+                            type="button"
+                            aria-label={`Editar ${t.description || category?.name || 'movimiento'}`}
+                            className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 py-3 pl-3.5 text-left outline-none focus-visible:bg-muted/60 sm:pl-4"
+                          >
+                            <CategoryBadge type={category?.type} emoji={category?.icon} />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-[0.9375rem] font-medium">
+                                {t.description || category?.name || 'Sin descripción'}
+                              </p>
+                              <p className="truncate text-[0.8125rem] text-muted-foreground">
+                                {[t.description ? category?.name : null, account?.name]
+                                  .filter(Boolean)
+                                  .join(' · ') || 'Sin categoría'}
+                              </p>
+                            </div>
+                            <Amount
+                              cents={t.amount_cents}
+                              currency={t.currency}
+                              signed
+                              className="text-[0.9375rem] font-semibold"
+                            />
+                          </button>
+                        }
                       />
                       <div className="flex items-center">
                         <AttachmentDialog transactionId={t.id} />

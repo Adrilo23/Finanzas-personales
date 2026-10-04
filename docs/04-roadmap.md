@@ -4,7 +4,7 @@
 >
 > **Fuente de verdad:** este archivo del repo (GitHub `Adrilo23/Finanzas-personales`). Claude Code lo actualiza al terminar cada tarea, en el mismo commit que el código.
 
-## Estado actual: 🟢 Fase 3 completada en lo esencial → siguiente: pendientes de Fase 1 (edición) o Fase 2 (Vercel, instalación en móvil)
+## Estado actual: 🟢 Fase 1 y Fase 3 completas en lo esencial → siguiente: transferencias entre cuentas y valoración de inversiones (Fase 3b), y tests
 
 Última actualización: 2026-10-04
 
@@ -24,9 +24,9 @@ Leyenda: `[x]` hecho · `[~]` hecho en parte (ver nota) · `[ ]` pendiente
 ## Fase 1 — MVP funcional (uso personal) ✅
 Objetivo: poder llevar mis propias cuentas reales, aunque sea con UI básica.
 - [x] Autenticación (login/registro con Supabase Auth)
-- [~] CRUD de cuentas (`accounts`) — crear y borrar (en cascada, migración 0004); **falta editar**
-- [~] CRUD de categorías (con precarga de categorías por defecto) — crear, borrar y subcategorías; precarga por trigger; **falta editar**
-- [~] Registro de movimientos (`transactions`) — alta y borrado lógico (`deleted_at`); **falta editar**
+- [x] CRUD de cuentas (`accounts`) — crear, editar (nombre, tipo, saldo inicial; la moneda no) y borrar en cascada (migración 0004)
+- [x] CRUD de categorías (con precarga de categorías por defecto) — crear, editar (nombre, icono, padre; el tipo no, porque fija el signo de los movimientos) y borrar; subcategorías de un nivel; precarga por trigger
+- [x] Registro de movimientos (`transactions`) — alta, edición directa (se toca la fila en la lista; el signo se recalcula según la categoría) y borrado lógico (`deleted_at`)
 - [x] Listado de movimientos con filtro por fecha/categoría/cuenta
 - [x] Cálculo de saldo por cuenta — vista `account_balances` (migración 0002)
 - [x] Dashboard básico: total ingresos, total gastos, balance del mes
@@ -44,6 +44,12 @@ Objetivo: poder llevar mis propias cuentas reales, aunque sea con UI básica.
 - [x] Exportación a Excel/PDF — `app/transactions/export/route.ts`
 - [x] Presupuestos por categoría con alertas — migración `0005`, `/budgets` y bloque en el inicio. Límite mensual por categoría de gasto, las subcategorías suman al padre, y los avisos son visuales (80 % «cerca del límite», >100 % «superado»), sin notificaciones externas. Partió de la propuesta del Project de claude.ai, adaptada al diseño y con correcciones (fechas en hora local, validación de la categoría en el servidor)
 
+## Fase 3b — Transferencias e inversiones (añadida 2026-10-04)
+Idea surgida al usar la app: una aportación a un fondo no es un gasto, es dinero que pasa de una cuenta a otra; y las cuentas de inversión cambian de valor solas.
+- [ ] Transferencias entre cuentas (cuenta origen → cuenta destino): no cuentan como ingreso ni gasto en los totales, pero mueven los saldos
+- [ ] Cuentas de inversión con valoración periódica (p. ej. fondos MSCI World y Amundi Emergentes): registrar el valor de mercado cada cierto tiempo y ver la plusvalía/minusvalía frente a lo aportado
+- [ ] Revisar el papel de la categoría `investment` cuando existan las transferencias (¿migrar las aportaciones existentes a transferencias?)
+
 ## Fase 4 — Pulido y preparación para portfolio/LinkedIn
 - [x] Diseño UI cuidado (no solo funcional) — rediseño completo: sistema de tokens (modo claro/oscuro), navegación con barra inferior en móvil, formularios nuevos, estados vacíos y de carga, gráfica accesible
 - [ ] Landing page del producto
@@ -59,9 +65,9 @@ Objetivo: poder llevar mis propias cuentas reales, aunque sea con UI básica.
 ---
 
 ## Decisiones (antes "pendientes")
-- **¿Editar/borrar transacciones directamente o solo con movimientos de ajuste?** — De momento, borrado lógico directo (`deleted_at`). La edición sigue sin decidir ni implementar.
+- **¿Editar/borrar transacciones directamente o solo con movimientos de ajuste?** — Edición directa y borrado lógico (`deleted_at`). `updated_at` registra cuándo se modificó; si se pasa a SaaS se puede añadir auditoría de cambios.
 - **¿Multi-moneda desde el MVP?** — Pospuesto. Las columnas `currency` existen, pero la UI trabaja en EUR y los totales suman sin convertir.
-- **¿Categorías por defecto fijas o editables?** — Editables: se precargan por usuario y se pueden borrar o ampliar (de momento no renombrar).
+- **¿Categorías por defecto fijas o editables?** — Editables: se precargan por usuario y se pueden renombrar, borrar o ampliar. El tipo de una categoría no se puede cambiar una vez creada.
 
 ## Cómo usar este documento con Claude
 - **Claude Code:** al completar una tarea, marca su casilla aquí (con una nota breve si queda algo pendiente), actualiza "Estado actual" y la fecha, e incluye el cambio en el mismo commit que el código.

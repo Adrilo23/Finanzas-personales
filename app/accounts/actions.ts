@@ -42,22 +42,53 @@ export async function createAccount(formData: FormData) {
   return { success: true }
 }
 
+export async function updateAccount(id: string, formData: FormData) {
+  const parsed = accountSchema.safeParse({
+    name: formData.get('name'),
+    type: formData.get('type'),
+    currency: formData.get('currency') || 'EUR',
+    initialBalance: Number(formData.get('initialBalance')),
+  })
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message }
+  }
+
+  const supabase = await createClient()
+  // La moneda no se edita: los movimientos ya registrados están en la moneda original.
+  const { data, error } = await supabase
+    .from('accounts')
+    .update({
+      name: parsed.data.name,
+      type: parsed.data.type,
+      initial_balance_cents: eurosToCents(parsed.data.initialBalance),
+    })
+    .eq('id', id)
+    .select('id')
+    .maybeSingle()
+
+  if (error) {
+    return { error: error.message }
+  }
+  if (!data) {
+    return { error: 'La cuenta no existe' }
+  }
+
+  revalidatePath('/accounts')
+  revalidatePath('/')
+  return { success: true }
+}
+
 export async function deleteAccount(id: string) {
   const supabase = await createClient()
+  // Desde la migración 0004 sus movimientos (y adjuntos) se borran en cascada.
   const { error } = await supabase.from('accounts').delete().eq('id', id)
 
   if (error) {
-    // 23503 = foreign_key_violation en Postgres: la cuenta tiene movimientos
-    // enlazados (transactions.account_id es ON DELETE RESTRICT a proposito).
-    if (error.code === '23503') {
-      return {
-        error:
-          'No se puede eliminar: esta cuenta tiene movimientos asociados, incluidos los ya eliminados (se conservan como historial a propósito). Para purgarlos definitivamente hace falta hacerlo desde la base de datos.',
-      }
-    }
     return { error: error.message }
   }
 
   revalidatePath('/accounts')
+  revalidatePath('/')
   return { success: true }
 }

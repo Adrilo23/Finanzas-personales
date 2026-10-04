@@ -5,13 +5,13 @@ import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { PlusIcon } from 'lucide-react'
 import { categorySchema, type CategoryInput } from '@/lib/validation/category-schemas'
-import { createCategory } from './actions'
+import { createCategory, updateCategory } from './actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { NativeSelect } from '@/components/ui/native-select'
 import { Segmented } from '@/components/ui/segmented'
-import { Field, FieldError, FormError } from '@/components/ui/field'
+import { Field, FieldError, FieldHint, FormError } from '@/components/ui/field'
 import { CATEGORY_TYPE_META } from '@/components/category-type'
 import {
   Dialog,
@@ -31,7 +31,36 @@ const TYPE_OPTIONS = (['expense', 'income', 'investment'] as const).map((value) 
   label: CATEGORY_TYPE_META[value].label,
 }))
 
-export function NewCategoryDialog({ categories }: { categories: CategoryOption[] }) {
+export type EditableCategory = {
+  id: string
+  name: string
+  type: CategoryInput['type']
+  parentId: string | null
+  icon: string | null
+}
+
+/** Diálogo de alta de categorías; con `category`, edita esa categoría (salvo el tipo). */
+export function NewCategoryDialog({
+  categories,
+  category,
+  trigger,
+}: {
+  categories: CategoryOption[]
+  category?: EditableCategory
+  trigger?: React.ReactNode
+}) {
+  const editing = Boolean(category)
+  const hasChildren = category ? categories.some((c) => c.parent_id === category.id) : false
+  const initialValues = (): Partial<CategoryInput> =>
+    category
+      ? {
+          name: category.name,
+          type: category.type,
+          parentId: category.parentId ?? '',
+          icon: category.icon ?? '',
+        }
+      : { type: 'expense', parentId: '', icon: '' }
+
   const [open, setOpen] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
   const {
@@ -43,12 +72,12 @@ export function NewCategoryDialog({ categories }: { categories: CategoryOption[]
     formState: { errors, isSubmitting },
   } = useForm<CategoryInput>({
     resolver: zodResolver(categorySchema),
-    defaultValues: { type: 'expense', parentId: '', icon: '' },
+    defaultValues: initialValues(),
   })
 
   const selectedType = useWatch({ control, name: 'type' })
   const possibleParents = categories.filter(
-    (c) => c.type === selectedType && c.parent_id === null
+    (c) => c.type === selectedType && c.parent_id === null && c.id !== category?.id
   )
 
   const onSubmit = async (data: CategoryInput) => {
@@ -59,12 +88,14 @@ export function NewCategoryDialog({ categories }: { categories: CategoryOption[]
     formData.set('parentId', data.parentId ?? '')
     formData.set('icon', data.icon ?? '')
 
-    const result = await createCategory(formData)
+    const result = category
+      ? await updateCategory(category.id, formData)
+      : await createCategory(formData)
     if (result?.error) {
       setServerError(result.error)
       return
     }
-    reset()
+    if (!category) reset()
     setOpen(false)
   }
 
@@ -74,35 +105,42 @@ export function NewCategoryDialog({ categories }: { categories: CategoryOption[]
       onOpenChange={(next) => {
         setOpen(next)
         if (!next) setServerError(null)
+        if (next && category) reset(initialValues())
       }}
     >
       <DialogTrigger asChild>
-        <Button>
-          <PlusIcon data-icon="inline-start" />
-          Nueva categoría
-        </Button>
+        {trigger ?? (
+          <Button>
+            <PlusIcon data-icon="inline-start" />
+            Nueva categoría
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Nueva categoría</DialogTitle>
+          <DialogTitle>{editing ? 'Editar categoría' : 'Nueva categoría'}</DialogTitle>
           <DialogDescription>
-            El tipo decide si sus movimientos suman (ingreso) o restan (gasto e inversión).
+            {editing
+              ? `Es de tipo ${CATEGORY_TYPE_META[selectedType].label.toLowerCase()}. El tipo no se puede cambiar porque decide el signo de los movimientos ya registrados.`
+              : 'El tipo decide si sus movimientos suman (ingreso) o restan (gasto e inversión).'}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4" noValidate>
-          <Field>
-            <Label>Tipo</Label>
-            <Segmented
-              name="type"
-              aria-label="Tipo de categoría"
-              value={selectedType}
-              onValueChange={(value) => {
-                setValue('type', value)
-                setValue('parentId', '')
-              }}
-              options={TYPE_OPTIONS}
-            />
-          </Field>
+          {!editing && (
+            <Field>
+              <Label>Tipo</Label>
+              <Segmented
+                name="type"
+                aria-label="Tipo de categoría"
+                value={selectedType}
+                onValueChange={(value) => {
+                  setValue('type', value)
+                  setValue('parentId', '')
+                }}
+                options={TYPE_OPTIONS}
+              />
+            </Field>
+          )}
 
           <div className="grid grid-cols-[4.5rem_1fr] gap-3">
             <Field>
@@ -121,7 +159,7 @@ export function NewCategoryDialog({ categories }: { categories: CategoryOption[]
               <Input
                 id="name"
                 placeholder="Ej. Supermercado"
-                autoFocus
+                autoFocus={!editing}
                 aria-invalid={!!errors.name}
                 {...register('name')}
               />
@@ -133,7 +171,7 @@ export function NewCategoryDialog({ categories }: { categories: CategoryOption[]
             <Label htmlFor="parentId">
               Dentro de <span className="font-normal text-muted-foreground">(opcional)</span>
             </Label>
-            <NativeSelect id="parentId" {...register('parentId')}>
+            <NativeSelect id="parentId" disabled={hasChildren} {...register('parentId')}>
               <option value="">Ninguna — categoría principal</option>
               {possibleParents.map((parent) => (
                 <option key={parent.id} value={parent.id}>
@@ -141,6 +179,9 @@ export function NewCategoryDialog({ categories }: { categories: CategoryOption[]
                 </option>
               ))}
             </NativeSelect>
+            {hasChildren && (
+              <FieldHint>Tiene subcategorías, así que debe seguir siendo principal.</FieldHint>
+            )}
           </Field>
 
           <FormError>{serverError}</FormError>
@@ -152,7 +193,7 @@ export function NewCategoryDialog({ categories }: { categories: CategoryOption[]
               </Button>
             </DialogClose>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Guardando…' : 'Crear categoría'}
+              {isSubmitting ? 'Guardando…' : editing ? 'Guardar cambios' : 'Crear categoría'}
             </Button>
           </DialogFooter>
         </form>
