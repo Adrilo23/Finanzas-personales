@@ -43,3 +43,6 @@ next-env.d.ts
 # herramientas locales de Claude Code / Playwright MCP
 .claude/settings.local.json
 .playwright-mcp/
+.claude/skills/
+.claude/agents/
+skills-lock.json
