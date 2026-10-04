@@ -3,7 +3,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { accountSchema } from '@/lib/validation/account-schemas'
 import { eurosToCents } from '@/lib/money'
+import { firstOfNextMonth } from '@/lib/interest'
+import { format } from 'date-fns'
 import { revalidatePath } from 'next/cache'
+
+const today = () => format(new Date(), 'yyyy-MM-dd')
 
 export async function createAccount(formData: FormData) {
   const parsed = accountSchema.safeParse({
@@ -11,6 +15,7 @@ export async function createAccount(formData: FormData) {
     type: formData.get('type'),
     currency: formData.get('currency') || 'EUR',
     initialBalance: Number(formData.get('initialBalance')),
+    interestRate: formData.get('interestRate') ? Number(formData.get('interestRate')) : undefined,
   })
 
   if (!parsed.success) {
@@ -32,6 +37,9 @@ export async function createAccount(formData: FormData) {
     type: parsed.data.type,
     currency: parsed.data.currency,
     initial_balance_cents: eurosToCents(parsed.data.initialBalance),
+    // El primer abono de intereses es el día 1 del mes que viene.
+    interest_rate: parsed.data.interestRate ?? null,
+    interest_next_date: parsed.data.interestRate ? firstOfNextMonth(today()) : null,
   })
 
   if (error) {
@@ -48,6 +56,7 @@ export async function updateAccount(id: string, formData: FormData) {
     type: formData.get('type'),
     currency: formData.get('currency') || 'EUR',
     initialBalance: Number(formData.get('initialBalance')),
+    interestRate: formData.get('interestRate') ? Number(formData.get('interestRate')) : undefined,
   })
 
   if (!parsed.success) {
@@ -55,6 +64,16 @@ export async function updateAccount(id: string, formData: FormData) {
   }
 
   const supabase = await createClient()
+  const { data: current } = await supabase
+    .from('accounts')
+    .select('interest_next_date')
+    .eq('id', id)
+    .maybeSingle()
+  const rate = parsed.data.interestRate ?? null
+  // Al activar el interés, el primer abono es el día 1 del mes que viene; si ya estaba
+  // activo, se mantiene la fecha (cambiar el % no repite ni salta ningún mes).
+  const nextDate = rate ? (current?.interest_next_date ?? firstOfNextMonth(today())) : null
+
   // La moneda no se edita: los movimientos ya registrados están en la moneda original.
   const { data, error } = await supabase
     .from('accounts')
@@ -62,6 +81,8 @@ export async function updateAccount(id: string, formData: FormData) {
       name: parsed.data.name,
       type: parsed.data.type,
       initial_balance_cents: eurosToCents(parsed.data.initialBalance),
+      interest_rate: rate,
+      interest_next_date: nextDate,
     })
     .eq('id', id)
     .select('id')

@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ArrowRightIcon, PencilIcon, WalletIcon } from 'lucide-react'
 import { formatCents } from '@/lib/money'
+import { formatPercent } from '@/lib/format'
 import { gainPercent } from '@/lib/investments'
 import { createClient } from '@/lib/supabase/server'
 import { ACCOUNT_TYPE_LABELS, type AccountInput } from '@/lib/validation/account-schemas'
@@ -40,13 +41,17 @@ export default async function AccountsPage() {
   const supabase = await createClient()
   // Postgres marca todas las columnas de una vista como anulables en los tipos generados,
   // aunque aquí vienen de columnas NOT NULL de accounts; de ahí los ?? y el ! de abajo.
-  const [{ data: accounts }, { data: holdingValues }] = await Promise.all([
+  const [{ data: accounts }, { data: holdingValues }, { data: interestRows }] = await Promise.all([
     supabase
       .from('account_balances')
       .select('id, name, type, currency, initial_balance_cents, balance_cents')
       .order('created_at', { ascending: true }),
     supabase.from('holding_values').select('account_id, invested_cents, gain_cents'),
+    supabase.from('accounts').select('id, interest_rate').not('interest_rate', 'is', null),
   ])
+
+  // Interés anual de las cuentas remuneradas (la vista de saldos no lo incluye).
+  const interestRate = new Map((interestRows ?? []).map((a) => [a.id, Number(a.interest_rate)]))
 
   const list = accounts ?? []
   // Aportado y rentabilidad de cada cuenta de inversión (suma de sus activos).
@@ -100,6 +105,8 @@ export default async function AccountsPage() {
                     <p className="text-[0.8125rem] text-muted-foreground">
                       {ACCOUNT_TYPE_LABELS[account.type as keyof typeof ACCOUNT_TYPE_LABELS] ??
                         'Otro'}
+                      {interestRate.has(account.id!) &&
+                        ` · ${formatPercent(interestRate.get(account.id!)!)} anual`}
                     </p>
                   </div>
                   <div className="flex">
@@ -110,6 +117,7 @@ export default async function AccountsPage() {
                         type: (account.type ?? 'other') as AccountInput['type'],
                         currency: account.currency ?? 'EUR',
                         initialBalanceCents: account.initial_balance_cents ?? 0,
+                        interestRate: interestRate.get(account.id!) ?? null,
                       }}
                       trigger={
                         <Button

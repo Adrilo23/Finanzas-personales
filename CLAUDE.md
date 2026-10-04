@@ -73,6 +73,9 @@ Los selects con joins (`categories(type)`, `accounts(name)`) pueden devolver un 
 ### Inversiones
 Las cuentas de tipo `investment` tienen activos (`holdings`: fondos por ISIN o criptomonedas) con sus compras/ventas (`holding_operations`, participaciones `numeric` introducidas a mano). El valor (participaciones × último precio) se calcula en SQL en la vista `holding_values` y se suma al saldo en `account_balances`; no lo calcules en JS. Los precios vienen de `lib/prices.ts` (interfaz `PriceProvider`, hoy la API no oficial de Yahoo, no apta para uso comercial) y se guardan por usuario en `asset_prices`. `refreshStalePrices` se ejecuta junto a los recurrentes en `components/app-nav.tsx` y solo consulta la fuente si un activo lleva más de 6 h sin refrescar. La lógica pura (ISIN, participaciones, parseo de respuestas) está en `lib/investments.ts`, con tests.
 
+### Cuentas remuneradas
+Cualquier cuenta puede tener `interest_rate` (% anual) e `interest_next_date`. `processAccountInterest` (`lib/interest.ts`, llamado desde `components/app-nav.tsx`) abona cada día 1 el interés del mes anterior: saldo medio diario de efectivo (movimientos + operaciones con `affects_cash`) × % ÷ 12, como ingreso de la categoría «Intereses». Antes de insertar, reserva el periodo moviendo la fecha con un update condicional, para no duplicar si coinciden dos cargas. El cálculo es puro y tiene tests (`computeInterestPayments`).
+
 ### Adjuntos
 Se guardan en el bucket privado `attachments` con la ruta `{user_id}/{transaction_id}/archivo`; la política de Storage exige que la primera carpeta sea `auth.uid()`. Al borrar, se elimina primero el archivo de Storage y después la fila (`app/transactions/attachments-actions.ts`).
 

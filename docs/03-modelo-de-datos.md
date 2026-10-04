@@ -30,7 +30,11 @@ Dónde está el dinero: cuenta bancaria, efectivo, tarjeta…
 | type | text | `bank`, `cash`, `card`, `investment` (desde `0007`), `other` |
 | currency | text | ISO 4217, por defecto `EUR` |
 | initial_balance_cents | bigint | saldo inicial en céntimos |
+| interest_rate | numeric(6,3) | opcional (`0011`): interés anual en % de una cuenta remunerada, p. ej. `3` |
+| interest_next_date | date | próximo abono de intereses (día 1); los dos campos van juntos o los dos nulos |
 | created_at | timestamptz | |
+
+Intereses: cada día 1 se abona como ingreso (categoría «Intereses», se crea si no existe) el interés del mes anterior = saldo medio diario de efectivo × % ÷ 12. Lo calcula `lib/interest.ts` de forma perezosa, como los recurrentes.
 
 ### categories (categorías) — `0001`
 Categorías de ingreso, gasto o inversión, con subcategorías.

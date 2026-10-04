@@ -20,6 +20,8 @@ export type Database = {
           currency: string
           id: string
           initial_balance_cents: number
+          interest_next_date: string | null
+          interest_rate: number | null
           name: string
           type: string
           user_id: string
@@ -29,6 +31,8 @@ export type Database = {
           currency?: string
           id?: string
           initial_balance_cents?: number
+          interest_next_date?: string | null
+          interest_rate?: number | null
           name: string
           type: string
           user_id: string
@@ -38,6 +42,8 @@ export type Database = {
           currency?: string
           id?: string
           initial_balance_cents?: number
+          interest_next_date?: string | null
+          interest_rate?: number | null
           name?: string
           type?: string
           user_id?: string

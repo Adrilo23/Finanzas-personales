@@ -38,6 +38,7 @@ export type EditableAccount = {
   type: AccountInput['type']
   currency: string
   initialBalanceCents: number
+  interestRate: number | null
 }
 
 /** Diálogo de alta de cuentas; con `account`, edita esa cuenta. */
@@ -53,6 +54,7 @@ export function NewAccountDialog({
           type: account.type,
           currency: account.currency,
           initialBalance: centsToEuros(account.initialBalanceCents),
+          interestRate: account.interestRate ?? undefined,
         }
       : { type: 'bank', currency: 'EUR' }
 
@@ -79,6 +81,7 @@ export function NewAccountDialog({
     formData.set('type', data.type)
     formData.set('currency', data.currency)
     formData.set('initialBalance', String(data.initialBalance))
+    if (data.interestRate) formData.set('interestRate', String(data.interestRate))
 
     const result = account
       ? await updateAccount(account.id, formData)
@@ -154,6 +157,38 @@ export function NewAccountDialog({
                 : 'Lo que tiene la cuenta hoy, antes de registrar movimientos.'}
             </FieldHint>
             <FieldError>{errors.initialBalance?.message}</FieldError>
+          </Field>
+
+          <Field>
+            <Label htmlFor="interestRate">
+              Interés anual <span className="font-normal text-muted-foreground">(opcional)</span>
+            </Label>
+            <div className="relative">
+              <Input
+                id="interestRate"
+                inputMode="decimal"
+                autoComplete="off"
+                placeholder="Sin interés"
+                className="num pr-9"
+                aria-invalid={!!errors.interestRate}
+                {...register('interestRate', {
+                  // Vacío = cuenta sin remunerar.
+                  setValueAs: (v) =>
+                    v === '' || v === null || v === undefined ? undefined : parseEurosInput(v),
+                })}
+              />
+              <span
+                aria-hidden
+                className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-muted-foreground"
+              >
+                %
+              </span>
+            </div>
+            <FieldHint>
+              Si la cuenta está remunerada, cada día 1 se abona como ingreso el interés del mes
+              anterior sobre su saldo medio. Si te retienen impuestos, pon el % neto.
+            </FieldHint>
+            <FieldError>{errors.interestRate?.message}</FieldError>
           </Field>
 
           <FormError>{serverError}</FormError>

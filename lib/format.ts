@@ -20,3 +20,10 @@ export function formatDayHeading(isoDate: string): string {
 export function formatMonthYear(date: Date): string {
   return format(date, "MMMM 'de' yyyy", { locale: es })
 }
+
+/** Interés o porcentaje dado en % ("3" → "3 %", "2.25" → "2,25 %"). */
+export function formatPercent(percent: number): string {
+  return new Intl.NumberFormat('es-ES', { style: 'percent', maximumFractionDigits: 3 }).format(
+    percent / 100
+  )
+}
