@@ -46,12 +46,23 @@ Objetivo: poder llevar mis propias cuentas reales, aunque sea con UI básica.
 
 ## Fase 3b — Transferencias e inversiones (añadida 2026-10-04)
 Idea surgida al usar la app: una aportación a un fondo no es un gasto, es dinero que pasa de una cuenta a otra; y las cuentas de inversión cambian de valor solas.
-- [ ] Transferencias entre cuentas (cuenta origen → cuenta destino): no cuentan como ingreso ni gasto en los totales, pero mueven los saldos
-- [ ] Cuentas de inversión con valoración periódica (p. ej. fondos MSCI World y Amundi Emergentes): registrar el valor de mercado cada cierto tiempo y ver la plusvalía/minusvalía frente a lo aportado
-- [ ] Revisar el papel de la categoría `investment` cuando existan las transferencias (¿migrar las aportaciones existentes a transferencias?)
+- [ ] Transferencias entre cuentas (origen → destino): dos movimientos enlazados, sin categoría; mueven saldos pero no cuentan como ingreso, gasto ni presupuesto. Admitir transferencias recurrentes (aportación mensual)
+- [ ] Revisar el papel de la categoría `investment`: propuesta → "invertido" = lo transferido a cuentas de tipo inversión, y migrar las aportaciones existentes a transferencias
+- [ ] Cuentas de inversión con posiciones: tipo de cuenta `investment`; por cada fondo, ISIN y participaciones (calculadas al aportar: importe ÷ valor liquidativo; ajustables a mano)
+- [ ] Valoración manual: introducir el valor cuando se quiera; mostrar valor de mercado, aportado y plusvalía (€ y %), y avisar si lleva más de un mes sin actualizar
+- [ ] Actualización diaria automática de precios: tabla de precios compartida (ISIN, fecha, valor liquidativo) rellenada por una tarea programada (Vercel Cron o Supabase pg_cron + Edge Function). Fuente detrás de una interfaz `PriceProvider` intercambiable
+  - Uso personal/amigos: fuente gratuita (p. ej. API no oficial de Yahoo), asumiendo que puede fallar
+  - **Antes de vender: proveedor de datos con licencia comercial** (redistribuir precios a clientes lo exige)
+  - Excepción a "todo con anon key + RLS": la tarea usa la service role key solo en servidor; la tabla de precios no tiene datos personales y los usuarios solo la leen
+  - Pendiente: confirmar que los ISIN de los fondos de Adrián (MSCI World, Amundi Emergentes) están cubiertos por la fuente elegida
 
 ## Fase 4 — Pulido y preparación para portfolio/LinkedIn
 - [x] Diseño UI cuidado (no solo funcional) — rediseño completo: sistema de tokens (modo claro/oscuro), navegación con barra inferior en móvil, formularios nuevos, estados vacíos y de carga, gráfica accesible
+- [ ] Ayuda para nuevos usuarios (prioritaria: la usarán familia y amigos y el objetivo es venderla)
+  - [ ] Lista de primeros pasos en el inicio que se marca sola según el uso (cuenta, movimiento, presupuesto, recurrente, instalar en el móvil)
+  - [ ] Página de ayuda en la app (6-8 preguntas reales) + guía de instalación específica para iPhone (Safari no ofrece instalar la PWA)
+  - [ ] Ayudas contextuales "?" solo en los puntos confusos: importe en positivo, gasto/inversión/transferencia, recurrentes generados al abrir la app, subcategorías que suman al padre
+  - [ ] Modo demo con datos de ejemplo ("Probar sin registrarme"), junto con la landing
 - [ ] Landing page del producto
 - [~] Documentación técnica del proyecto — `CLAUDE.md` describe la arquitectura; **falta la documentación pública**
 - [ ] Despliegue estable en dominio propio
