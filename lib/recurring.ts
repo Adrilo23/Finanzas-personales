@@ -1,6 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { applyCategorySign } from '@/lib/money'
-import { addWeeks, addMonths, addYears, format, parseISO } from 'date-fns'
+import {
+  addMonths,
+  addWeeks,
+  addYears,
+  format,
+  getDate,
+  getDaysInMonth,
+  parseISO,
+  setDate,
+} from 'date-fns'
 
 export type Frequency = 'weekly' | 'monthly' | 'yearly'
 
@@ -8,38 +17,34 @@ export function isSupportedFrequency(value: string): value is Frequency {
   return value === 'weekly' || value === 'monthly' || value === 'yearly'
 }
 
-function addPeriods(date: Date, frequency: Frequency, n: number): Date {
-  switch (frequency) {
-    case 'weekly':
-      return addWeeks(date, n)
-    case 'monthly':
-      return addMonths(date, n)
-    case 'yearly':
-      return addYears(date, n)
-  }
+/** Siguiente vencimiento tras `date`, respetando el día de referencia en mensual y anual. */
+function nextOccurrence(date: Date, frequency: Frequency, anchorDay: number): Date {
+  if (frequency === 'weekly') return addWeeks(date, 1)
+  // addMonths/addYears recortan al último día del mes (31 ene + 1 mes = 28 feb); después se
+  // recoloca en el día de referencia, para que el 28 de febrero vuelva a ser 31 en marzo.
+  const moved = frequency === 'monthly' ? addMonths(date, 1) : addYears(date, 1)
+  return setDate(moved, Math.min(anchorDay, getDaysInMonth(moved)))
 }
 
 /**
  * Fechas (yyyy-MM-dd) que han vencido desde `nextRunDate` hasta `today`, ambos incluidos,
- * y la siguiente fecha pendiente. Cada fecha se calcula desde la inicial (inicio + n
- * periodos) y no encadenando, para que un día 31 no derive a 28 tras pasar por febrero
- * dentro de una misma generación.
+ * y la siguiente fecha pendiente. `anchorDay` es el día del mes original de la regla
+ * (columna anchor_day): un día 31 cae el 28/29 en febrero y vuelve al 31 en marzo.
  */
 export function computeDueDates(
   nextRunDate: string,
   frequency: Frequency,
-  today: string
+  today: string,
+  anchorDay?: number
 ): { dates: string[]; next: string } {
-  const start = parseISO(nextRunDate)
+  let cursor = parseISO(nextRunDate)
+  const anchor = anchorDay ?? getDate(cursor)
   const dates: string[] = []
-  let n = 0
-  let cursor = format(start, 'yyyy-MM-dd')
-  while (cursor <= today) {
-    dates.push(cursor)
-    n += 1
-    cursor = format(addPeriods(start, frequency, n), 'yyyy-MM-dd')
+  while (format(cursor, 'yyyy-MM-dd') <= today) {
+    dates.push(format(cursor, 'yyyy-MM-dd'))
+    cursor = nextOccurrence(cursor, frequency, anchor)
   }
-  return { dates, next: cursor }
+  return { dates, next: format(cursor, 'yyyy-MM-dd') }
 }
 
 type DueRule = {
@@ -49,6 +54,7 @@ type DueRule = {
   amount_cents: number
   frequency: string
   next_run_date: string
+  anchor_day: number
   categories: { type: string }[] | { type: string } | null
 }
 
@@ -70,7 +76,9 @@ export async function processRecurringRules(userId: string) {
 
   const { data } = await supabase
     .from('recurring_rules')
-    .select('id, account_id, category_id, amount_cents, frequency, next_run_date, categories(type)')
+    .select(
+      'id, account_id, category_id, amount_cents, frequency, next_run_date, anchor_day, categories(type)'
+    )
     .eq('active', true)
     .lte('next_run_date', today)
 
@@ -81,7 +89,12 @@ export async function processRecurringRules(userId: string) {
     if (!isSupportedFrequency(rule.frequency)) continue
 
     const signedCents = applyCategorySign(rule.amount_cents, first(rule.categories)?.type)
-    const { dates: datesToInsert, next } = computeDueDates(rule.next_run_date, rule.frequency, today)
+    const { dates: datesToInsert, next } = computeDueDates(
+      rule.next_run_date,
+      rule.frequency,
+      today,
+      rule.anchor_day
+    )
 
     if (datesToInsert.length === 0) continue
 

@@ -34,6 +34,8 @@ export async function createRecurringRule(formData: FormData) {
     amount_cents: eurosToCents(parsed.data.amount),
     frequency: parsed.data.frequency,
     next_run_date: parsed.data.nextRunDate,
+    // Día de referencia: los vencimientos mensuales/anuales vuelven siempre a este día.
+    anchor_day: Number(parsed.data.nextRunDate.slice(8, 10)),
     active: true,
   })
 

@@ -154,6 +154,7 @@ export type Database = {
           account_id: string
           active: boolean
           amount_cents: number
+          anchor_day: number
           category_id: string | null
           created_at: string
           frequency: string
@@ -165,6 +166,7 @@ export type Database = {
           account_id: string
           active?: boolean
           amount_cents: number
+          anchor_day: number
           category_id?: string | null
           created_at?: string
           frequency: string
@@ -176,6 +178,7 @@ export type Database = {
           account_id?: string
           active?: boolean
           amount_cents?: number
+          anchor_day?: number
           category_id?: string | null
           created_at?: string
           frequency?: string

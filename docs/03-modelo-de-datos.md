@@ -4,7 +4,7 @@ Modelo orientado a PostgreSQL (Supabase), pensado como un *ledger* (libro de mov
 
 > **Fuente de verdad:** las migraciones de `supabase/migrations/` y los tipos generados en `lib/supabase/database.types.ts` (`npm run db:types`). Este documento las resume. Cualquier cambio de esquema se hace con una migración nueva numerada y se refleja aquí en el mismo commit.
 >
-> Última revisión contra las migraciones: 2026-10-04 (hasta `0005`).
+> Última revisión contra las migraciones: 2026-10-04 (hasta `0006`).
 
 ## Convenciones
 
@@ -65,7 +65,7 @@ Tabla central.
 | created_at | timestamptz | |
 | updated_at | timestamptz | lo mantiene el trigger `set_updated_at` |
 
-### recurring_rules (movimientos recurrentes) — `0001`
+### recurring_rules (movimientos recurrentes) — `0001`, `0006`
 Nóminas, alquiler, suscripciones…
 
 | Campo | Tipo | Notas |
@@ -77,6 +77,7 @@ Nóminas, alquiler, suscripciones…
 | amount_cents | bigint | **se guarda en positivo**; el signo se aplica al generar el movimiento |
 | frequency | text | `weekly`, `monthly`, `yearly`, `custom` (`custom` existe pero se ignora) |
 | next_run_date | date | |
+| anchor_day | smallint | día del mes original (1-31, `0006`). Los vencimientos mensuales y anuales vuelven a este día, recortado al último día en los meses cortos (31 → 28 feb → 31 mar) |
 | active | boolean | |
 | created_at | timestamptz | |
 

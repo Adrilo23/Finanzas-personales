@@ -34,7 +34,7 @@ Objetivo: poder llevar mis propias cuentas reales, aunque sea con UI básica.
 ## Calidad
 - [x] Tests con Vitest de la lógica de dinero y cálculos (`lib/*.test.ts`) y CI en GitHub Actions (lint, tipos, tests)
 - [x] Corregido al escribir los tests: `parseEurosInput` leía "1.234,56" como 1,23 €; ahora entiende el formato español con miles
-- [ ] Recurrentes mensuales en día 29-31: al pasar por un mes más corto la fecha guardada baja (31 → 28) y se queda ahí en los meses siguientes. Dentro de una misma generación ya no deriva; arreglarlo del todo requiere guardar el día original de la regla (columna nueva)
+- [x] Recurrentes mensuales en día 29-31: antes, al pasar por un mes corto, bajaban a 28 y se quedaban ahí. Arreglado con `anchor_day` (migración `0006`): cada vencimiento vuelve al día original. Las reglas que ya hubieran derivado antes del arreglo se quedan en el día en que estaban
 
 ## Fase 2 — PWA y multiplataforma
 - [x] Configurar manifest y service worker (instalable en móvil) — Serwist (`app/sw.ts`, `app/manifest.ts`)

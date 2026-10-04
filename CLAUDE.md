@@ -56,7 +56,7 @@ Cada sección (`app/accounts`, `app/categories`, `app/transactions`, `app/recurr
 - El saldo de cada cuenta sale de la vista `account_balances` (migración 0002, `security_invoker`), no se calcula en el cliente.
 
 ### Movimientos recurrentes
-`lib/recurring.ts` → `processRecurringRules()` se ejecuta desde `components/app-nav.tsx` (montado en el layout) cada vez que se carga una página autenticada. Genera todas las transacciones que hayan vencido desde `next_run_date` (puede ser más de una por regla) y luego adelanta esa fecha. No hay cron: la generación ocurre de forma perezosa. La frecuencia `custom` existe en el esquema, pero se ignora.
+`lib/recurring.ts` → `processRecurringRules()` se ejecuta desde `components/app-nav.tsx` (montado en el layout) cada vez que se carga una página autenticada. Genera todas las transacciones que hayan vencido desde `next_run_date` (puede ser más de una por regla) y luego adelanta esa fecha. Las fechas las calcula `computeDueDates` usando `anchor_day` (día original de la regla), para que un día 31 no derive a 28 tras febrero. No hay cron: la generación ocurre de forma perezosa. La frecuencia `custom` existe en el esquema, pero se ignora.
 
 ### Relaciones embebidas de Supabase
 Los selects con joins (`categories(type)`, `accounts(name)`) pueden devolver un objeto o un array según los tipos. El patrón del proyecto es un helper local `first()` que normaliza ambos casos (está en `lib/recurring.ts`, `lib/reports.ts`, `lib/budgets.ts` y en la ruta de exportación).
