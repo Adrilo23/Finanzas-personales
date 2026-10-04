@@ -4,7 +4,7 @@
 >
 > **Fuente de verdad:** este archivo del repo (GitHub `Adrilo23/Finanzas-personales`). Claude Code lo actualiza al terminar cada tarea, en el mismo commit que el código.
 
-## Estado actual: 🟢 Fase 1 y Fase 3 completas, con tests y CI → siguiente: transferencias y plan de aportación periódica (Fase 3b), o la actualización diaria programada
+## Estado actual: 🟢 Fase 1 y Fase 3 completas, con tests y CI → siguiente: plan de aportación periódica (Fase 3b)
 
 Última actualización: 2026-10-04
 
@@ -65,7 +65,11 @@ Idea surgida al usar la app: una cuenta como MyInvestor contiene fondos cuyo val
   - Requiere `SUPABASE_SERVICE_ROLE_KEY` y una clave de cron en Vercel, solo en servidor. Es la única excepción a "todo con anon key + RLS": la tabla de precios no tiene datos personales y los usuarios solo la leen
   - Uso personal/amigos: fuente gratuita (API no oficial de Yahoo). **Antes de vender: proveedor de datos con licencia comercial**
   - Cobertura comprobada en Yahoo (2026-10-04), los tres en EUR y con valor liquidativo diario (desfase normal de 1 día hábil): Fidelity MSCI World Index P-Acc (`IE00BYX5NX33` → `0P0001CLDK.F`), Amundi IS Core MSCI Emerging Markets IE-C (`LU0996175948` → `0P00011MU2.F`) y Groupama Trésorerie IC (`FR0000989626` → `0P00000LRT.F`)
-- [ ] **Tanda 3 — Transferencias entre cuentas** (origen → destino): dos movimientos enlazados, sin categoría; mueven saldos pero no cuentan como ingreso, gasto ni presupuesto. Admiten recurrencia (aportación mensual). Una aportación quedaría como transferencia banco → cuenta de inversión + compra del fondo
+- [x] **Tanda 3 — Traspasos entre cuentas** (migración `0008`; en la interfaz se llaman "Traspaso")
+  - Cuarto tipo en "Nuevo movimiento" (Gasto | Ingreso | Inversión | Traspaso) con cuenta origen y destino. Dos movimientos enlazados sin categoría: mueven saldos, no cuentan como ingreso, gasto, inversión ni presupuesto. Se editan (atómico) y se borran juntos
+  - En Movimientos se ven una vez ("BBVA → My Investor"); filtrando por una cuenta se ve su pata con signo, porque para esa cuenta sí es entrada o salida
+  - Traspasos recurrentes: nueva opción "Traspaso" en Recurrentes
+  - Efectivo en las cuentas de inversión: las compras lo consumen y las ventas lo devuelven; las posiciones ya registradas se marcaron como "sin efectivo". El formulario de operación permite desmarcarlo para posiciones previas
 - [ ] **Plan de aportación periódica** (flujo real de Adrián: cada mes 500 € de BBVA a MyInvestor repartidos entre MSCI World y Emergentes, y 50 € de BBVA a Kraken en Bitcoin). Una regla recurrente que, en su fecha, genera la transferencia origen → cuenta de inversión y una **compra pendiente** por cada activo según el reparto. Como las participaciones se conocen cuando el bróker ejecuta la orden (los fondos, con un día de retraso), la compra queda "pendiente de confirmar": se muestra con las participaciones estimadas (importe ÷ último precio) y se confirman con un toque o se corrigen con las reales. Depende de la tanda 3
 - [ ] Revisar la categoría `investment` cuando existan las transferencias: hasta entonces, lo registrado como gasto de inversión se deja como está
 

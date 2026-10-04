@@ -108,6 +108,7 @@ export async function addOperation(holdingId: string, formData: FormData) {
     operationDate: formData.get('operationDate'),
     units: Number(formData.get('units')),
     amount: Number(formData.get('amount')),
+    affectsCash: formData.get('affectsCash') !== 'false',
   })
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message }
@@ -142,6 +143,7 @@ export async function addOperation(holdingId: string, formData: FormData) {
     operation_date: parsed.data.operationDate,
     units,
     amount_cents: eurosToCents(parsed.data.amount),
+    affects_cash: parsed.data.affectsCash,
   })
   if (error) {
     return { error: error.message }

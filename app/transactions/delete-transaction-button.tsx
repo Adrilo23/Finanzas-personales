@@ -5,11 +5,21 @@ import { deleteTransaction } from './actions'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 
-export function DeleteTransactionButton({ id }: { id: string }) {
+export function DeleteTransactionButton({
+  id,
+  isTransfer = false,
+}: {
+  id: string
+  isTransfer?: boolean
+}) {
   return (
     <ConfirmDialog
-      title="¿Eliminar este movimiento?"
-      description="Dejará de contar en los saldos y en los informes."
+      title={isTransfer ? '¿Eliminar este traspaso?' : '¿Eliminar este movimiento?'}
+      description={
+        isTransfer
+          ? 'Se elimina de las dos cuentas y sus saldos vuelven a como estaban.'
+          : 'Dejará de contar en los saldos y en los informes.'
+      }
       onConfirm={() => deleteTransaction(id)}
       trigger={
         <Button

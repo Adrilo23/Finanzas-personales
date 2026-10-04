@@ -55,6 +55,11 @@ Cada sección (`app/accounts`, `app/categories`, `app/transactions`, `app/recurr
 - `transactions` usa soft delete (`deleted_at`). Toda consulta de movimientos debe filtrar con `.is('deleted_at', null)`.
 - El saldo de cada cuenta sale de la vista `account_balances` (migración 0002, `security_invoker`), no se calcula en el cliente.
 
+### Traspasos
+Un traspaso entre cuentas son dos filas de `transactions` con el mismo `transfer_id` y sin categoría (`lib/transfers.ts`). Al no tener categoría, todos los totales por tipo, los informes y los presupuestos los ignoran solos. En listas sin filtro de cuenta, oculta la pata de entrada (`isHiddenTransferLeg`) y no los cuentes como entradas ni salidas. Se editan con la RPC `update_transfer` y se borran ambas patas. `recurring_rules.to_account_id` convierte una regla en traspaso periódico.
+
+**Ojo con los embeds:** `recurring_rules` tiene dos FK a `accounts`, así que `accounts(name)` es ambiguo y PostgREST devuelve error; usa `accounts!recurring_rules_account_id_fkey(name)`. Revisa los embeds cada vez que añadas una segunda FK a una tabla.
+
 ### Movimientos recurrentes
 `lib/recurring.ts` → `processRecurringRules()` se ejecuta desde `components/app-nav.tsx` (montado en el layout) cada vez que se carga una página autenticada. Genera todas las transacciones que hayan vencido desde `next_run_date` (puede ser más de una por regla) y luego adelanta esa fecha. Las fechas las calcula `computeDueDates` usando `anchor_day` (día original de la regla), para que un día 31 no derive a 28 tras febrero. No hay cron: la generación ocurre de forma perezosa. La frecuencia `custom` existe en el esquema, pero se ignora.
 

@@ -25,6 +25,8 @@ export const operationSchema = z.object({
   operationDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Selecciona una fecha'),
   units: z.number().positive('Indica las participaciones (mayor que 0)'),
   amount: z.number().positive('El importe debe ser mayor que 0'),
+  /** Compra pagada con (o venta cobrada en) el efectivo de la cuenta. */
+  affectsCash: z.boolean(),
 })
 
 export type OperationInput = z.infer<typeof operationSchema>

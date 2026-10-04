@@ -7,7 +7,8 @@ import { formatDayHeading, formatMonthYear } from '@/lib/format'
 import { PageHeader, PageShell } from '@/components/page-header'
 import { Amount } from '@/components/amount'
 import { AccountIcon } from '@/components/account-type'
-import { CategoryBadge } from '@/components/category-type'
+import { CategoryBadge, TransferBadge } from '@/components/category-type'
+import { isHiddenTransferLeg } from '@/lib/transfers'
 import { BudgetBar, BudgetStatusBadge } from '@/components/budget-progress'
 import { getBudgetProgress } from '@/lib/budgets'
 import { NewAccountDialog } from '@/app/accounts/new-account-dialog'
@@ -29,6 +30,7 @@ type RecentRow = {
   currency: string
   description: string | null
   transaction_date: string
+  transfer_id: string | null
   accounts: { name: string }[] | { name: string } | null
   categories: CategoryRef[] | CategoryRef | null
 }
@@ -74,12 +76,12 @@ export default async function DashboardPage() {
     supabase
       .from('transactions')
       .select(
-        'id, amount_cents, currency, description, transaction_date, accounts(name), categories(name, type, icon)'
+        'id, amount_cents, currency, description, transaction_date, transfer_id, accounts(name), categories(name, type, icon)'
       )
       .is('deleted_at', null)
       .order('transaction_date', { ascending: false })
       .order('created_at', { ascending: false })
-      .limit(6),
+      .limit(10),
     supabase.from('categories').select('id, name, type').order('name', { ascending: true }),
     getBudgetProgress(now),
   ])
@@ -95,7 +97,10 @@ export default async function DashboardPage() {
     Boolean(a.id && a.name)
   )
   const netWorth = accounts.reduce((sum, a) => sum + (a.balance_cents ?? 0), 0)
-  const recent = (recentData ?? []) as RecentRow[]
+  // Cada traspaso una sola vez (su pata de salida).
+  const recent = ((recentData ?? []) as RecentRow[])
+    .filter((t) => !isHiddenTransferLeg(t, false))
+    .slice(0, 6)
   const accountOptions = accounts.map((a) => ({ id: a.id, name: a.name }))
   const categoryOptions = categories ?? []
 
@@ -471,24 +476,34 @@ export default async function DashboardPage() {
                 const account = first(t.accounts)
                 return (
                   <li key={t.id} className="flex items-center gap-3 px-2 py-2.5">
-                    <CategoryBadge
-                      type={category?.type}
-                      emoji={category?.icon}
-                      className="size-8"
-                    />
+                    {t.transfer_id ? (
+                      <TransferBadge className="size-8" />
+                    ) : (
+                      <CategoryBadge
+                        type={category?.type}
+                        emoji={category?.icon}
+                        className="size-8"
+                      />
+                    )}
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">
-                        {t.description || category?.name || 'Sin descripción'}
+                        {t.description ||
+                          (t.transfer_id ? 'Traspaso' : category?.name) ||
+                          'Sin descripción'}
                       </p>
                       <p className="truncate text-xs text-muted-foreground first-letter:uppercase">
                         {formatDayHeading(t.transaction_date)}
-                        {account?.name ? ` · ${account.name}` : ''}
+                        {account?.name
+                          ? t.transfer_id
+                            ? ` · desde ${account.name}`
+                            : ` · ${account.name}`
+                          : ''}
                       </p>
                     </div>
                     <Amount
-                      cents={t.amount_cents}
+                      cents={t.transfer_id ? Math.abs(t.amount_cents) : t.amount_cents}
                       currency={t.currency}
-                      signed
+                      signed={!t.transfer_id}
                       className="text-sm font-semibold"
                     />
                   </li>

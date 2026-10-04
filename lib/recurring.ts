@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { applyCategorySign } from '@/lib/money'
+import { buildTransferRows } from '@/lib/transfers'
+import type { TablesInsert } from '@/lib/supabase/database.types'
 import {
   addMonths,
   addWeeks,
@@ -55,6 +57,7 @@ type DueRule = {
   frequency: string
   next_run_date: string
   anchor_day: number
+  to_account_id: string | null
   categories: { type: string }[] | { type: string } | null
 }
 
@@ -77,7 +80,7 @@ export async function processRecurringRules(userId: string) {
   const { data } = await supabase
     .from('recurring_rules')
     .select(
-      'id, account_id, category_id, amount_cents, frequency, next_run_date, anchor_day, categories(type)'
+      'id, account_id, category_id, amount_cents, frequency, next_run_date, anchor_day, to_account_id, categories(type)'
     )
     .eq('active', true)
     .lte('next_run_date', today)
@@ -98,18 +101,35 @@ export async function processRecurringRules(userId: string) {
 
     if (datesToInsert.length === 0) continue
 
-    await supabase.from('transactions').insert(
-      datesToInsert.map((transaction_date) => ({
-        user_id: userId,
-        account_id: rule.account_id,
-        category_id: rule.category_id,
-        amount_cents: signedCents,
-        currency: 'EUR',
-        description: null,
-        transaction_date,
-        recurring_rule_id: rule.id,
-      }))
-    )
+    // Traspaso: dos movimientos enlazados por fecha. Movimiento normal: uno, con el
+    // signo que corresponde a su categoría.
+    const toAccountId = rule.to_account_id
+    const rows: TablesInsert<'transactions'>[] = toAccountId
+      ? datesToInsert.flatMap((date) =>
+          buildTransferRows({
+            userId,
+            transferId: crypto.randomUUID(),
+            fromAccountId: rule.account_id,
+            toAccountId,
+            amountCents: rule.amount_cents,
+            date,
+            recurringRuleId: rule.id,
+          })
+        )
+      : datesToInsert.map((transaction_date) => ({
+          user_id: userId,
+          account_id: rule.account_id,
+          category_id: rule.category_id,
+          amount_cents: signedCents,
+          currency: 'EUR',
+          description: null,
+          transaction_date,
+          recurring_rule_id: rule.id,
+        }))
+
+    const { error } = await supabase.from('transactions').insert(rows)
+    // Si falla, no se adelanta la fecha: se reintentará en la siguiente carga.
+    if (error) continue
 
     await supabase
       .from('recurring_rules')

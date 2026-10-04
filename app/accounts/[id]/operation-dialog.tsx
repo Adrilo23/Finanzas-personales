@@ -58,7 +58,7 @@ export function OperationDialog({
     formState: { errors, isSubmitting },
   } = useForm<OperationInput>({
     resolver: zodResolver(operationSchema),
-    defaultValues: { kind: 'buy', operationDate: todayISO() },
+    defaultValues: { kind: 'buy', operationDate: todayISO(), affectsCash: true },
   })
 
   const unitsLabel = isCrypto ? 'Cantidad' : 'Participaciones'
@@ -70,6 +70,7 @@ export function OperationDialog({
     formData.set('operationDate', data.operationDate)
     formData.set('units', String(data.units))
     formData.set('amount', String(data.amount))
+    formData.set('affectsCash', String(data.affectsCash))
     const result = await addOperation(holdingId, formData)
     if (result?.error) {
       setServerError(result.error)
@@ -85,7 +86,7 @@ export function OperationDialog({
         setOpen(next)
         if (next) {
           setKind('buy')
-          reset({ kind: 'buy', operationDate: todayISO() })
+          reset({ kind: 'buy', operationDate: todayISO(), affectsCash: true })
         } else {
           setServerError(null)
         }
@@ -150,6 +151,24 @@ export function OperationDialog({
               <FieldError>{errors.operationDate?.message}</FieldError>
             </Field>
           </div>
+
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg bg-muted/60 px-3 py-2.5 text-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5 size-4 shrink-0 accent-(--brand)"
+              {...register('affectsCash')}
+            />
+            <span>
+              {kind === 'buy'
+                ? 'Pagada con el efectivo de la cuenta'
+                : 'El dinero de la venta se queda en la cuenta'}
+              <span className="mt-0.5 block text-xs text-muted-foreground">
+                {kind === 'buy'
+                  ? 'Desmárcalo si es una posición que ya tenías antes de usar la app.'
+                  : 'Desmárcalo si el dinero salió de la cuenta directamente.'}
+              </span>
+            </span>
+          </label>
 
           <FormError>{serverError}</FormError>
 

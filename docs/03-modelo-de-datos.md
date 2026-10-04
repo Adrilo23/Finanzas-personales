@@ -4,7 +4,7 @@ Modelo orientado a PostgreSQL (Supabase), pensado como un *ledger* (libro de mov
 
 > **Fuente de verdad:** las migraciones de `supabase/migrations/` y los tipos generados en `lib/supabase/database.types.ts` (`npm run db:types`). Este documento las resume. Cualquier cambio de esquema se hace con una migración nueva numerada y se refleja aquí en el mismo commit.
 >
-> Última revisión contra las migraciones: 2026-10-04 (hasta `0007`).
+> Última revisión contra las migraciones: 2026-10-04 (hasta `0008`).
 
 ## Convenciones
 
@@ -47,7 +47,7 @@ Categorías de ingreso, gasto o inversión, con subcategorías.
 
 Por defecto: Nómina y Otros ingresos (`income`); Alquiler, Alimentación, Transporte, Ocio, Suministros, Salud y Otros gastos (`expense`); Inversión (`investment`).
 
-### transactions (movimientos) — `0001`, `0004`
+### transactions (movimientos) — `0001`, `0004`, `0008`
 Tabla central.
 
 | Campo | Tipo | Notas |
@@ -61,6 +61,7 @@ Tabla central.
 | description | text \| null | |
 | transaction_date | date | por defecto `current_date` |
 | recurring_rule_id | uuid \| null | FK → recurring_rules, `on delete set null` |
+| transfer_id | uuid \| null | enlaza las dos patas de un **traspaso** (`0008`); en ese caso `category_id` es null (check) |
 | deleted_at | timestamptz \| null | borrado lógico |
 | created_at | timestamptz | |
 | updated_at | timestamptz | lo mantiene el trigger `set_updated_at` |
@@ -80,6 +81,8 @@ Nóminas, alquiler, suscripciones…
 | anchor_day | smallint | día del mes original (1-31, `0006`). Los vencimientos mensuales y anuales vuelven a este día, recortado al último día en los meses cortos (31 → 28 feb → 31 mar) |
 | active | boolean | |
 | created_at | timestamptz | |
+
+`to_account_id` (`0008`, FK → accounts, `on delete cascade`): si está, la regla es un **traspaso** periódico de `account_id` a `to_account_id` (sin categoría). Con dos FK a accounts, los embeds deben nombrar la relación: `accounts!recurring_rules_account_id_fkey(name)`.
 
 Los movimientos se generan de forma diferida (`lib/recurring.ts`) al cargar una página autenticada; no hay cron.
 
@@ -141,6 +144,7 @@ Una cuenta de tipo `investment` (MyInvestor, Kraken…) contiene **activos**: fo
 | kind | text | `buy`, `sell` |
 | units | numeric(20, 8) | participaciones o unidades de cripto, `> 0` |
 | amount_cents | bigint | importe pagado o recibido, `> 0` |
+| affects_cash | boolean | `0008`: la compra se paga con (o la venta se cobra en) el efectivo de la cuenta. Las posiciones registradas antes de existir los traspasos se migraron a `false` |
 | created_at | timestamptz | |
 
 **asset_prices** — precio diario (valor liquidativo o cierre), **por usuario** en esta fase
@@ -175,8 +179,11 @@ accounts 1───N holdings 1───N holding_operations
 
 ## Vistas y cálculos derivados
 
-- **`account_balances`** (`0002`, recreada en `0007`, `security_invoker`): saldo por cuenta = `initial_balance_cents` + movimientos no borrados + **valor de mercado de sus activos** (`market_value_cents`, también como columna aparte). Las columnas de la vista salen anulables en los tipos generados.
+- **`account_balances`** (`0002`, recreada en `0007` y `0008`, `security_invoker`): `cash_cents` = saldo inicial + movimientos no borrados − compras + ventas (las que tienen `affects_cash`); `balance_cents` = `cash_cents` + `market_value_cents` (valor de mercado de sus activos). Las columnas de la vista salen anulables en los tipos generados.
 - **`holding_values`** (`0007`, `security_invoker`): por activo, participaciones netas (compras − ventas), aportado neto (`invested_cents`), último precio y fecha, `value_cents = round(participaciones × precio × 100)` y `gain_cents = valor − aportado`, todo en `numeric` y redondeado a céntimos en SQL.
+### Traspasos
+Dos filas de `transactions` con el mismo `transfer_id` (pata negativa en origen, positiva en destino), insertadas en una sola sentencia (`lib/transfers.ts` → `buildTransferRows`). Se editan con la función `update_transfer` (atómica, `security invoker`) y se borran juntas. Al no tener categoría, no cuentan como ingreso, gasto, inversión ni presupuesto. En listas sin filtro de cuenta se muestra solo la pata de salida.
+
 - Totales por categoría y periodo, e ingresos frente a gastos por mes: se calculan en el servidor (`app/page.tsx`, `lib/reports.ts`), no en tablas.
 
 ## Diferencias con el diseño inicial

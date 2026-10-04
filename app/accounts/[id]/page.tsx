@@ -58,7 +58,7 @@ export default async function InvestmentAccountPage({
 
   const { data: account } = await supabase
     .from('account_balances')
-    .select('id, name, type, balance_cents, market_value_cents')
+    .select('id, name, type, balance_cents, market_value_cents, cash_cents')
     .eq('id', id)
     .maybeSingle()
 
@@ -75,7 +75,7 @@ export default async function InvestmentAccountPage({
     holdings.length > 0
       ? await supabase
           .from('holding_operations')
-          .select('id, holding_id, operation_date, kind, units, amount_cents')
+          .select('id, holding_id, operation_date, kind, units, amount_cents, affects_cash')
           .in(
             'holding_id',
             holdings.map((h) => h.id)
@@ -87,6 +87,7 @@ export default async function InvestmentAccountPage({
   const totalValue = holdings.reduce((sum, h) => sum + (h.value_cents ?? 0), 0)
   const totalInvested = holdings.reduce((sum, h) => sum + (h.invested_cents ?? 0), 0)
   const totalGain = totalValue - totalInvested
+  const cash = account.cash_cents ?? 0
   const priceDates = holdings.map((h) => h.price_date).filter((d): d is string => Boolean(d))
   const oldestPriceDate = priceDates.sort()[0]
 
@@ -121,7 +122,7 @@ export default async function InvestmentAccountPage({
             className="surface grid gap-5 p-5 sm:grid-cols-[1fr_auto] sm:items-end sm:p-6"
           >
             <div>
-              <p className="text-sm text-muted-foreground">Valor actual</p>
+              <p className="text-sm text-muted-foreground">Valor de los activos</p>
               <Amount
                 cents={totalValue}
                 className="mt-1 block text-4xl font-semibold tracking-[-0.03em] sm:text-[2.75rem]"
@@ -134,6 +135,17 @@ export default async function InvestmentAccountPage({
               )}
             </div>
             <dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:text-right">
+              {cash !== 0 && (
+                <>
+                  <dt className="text-muted-foreground">Efectivo</dt>
+                  <dd>
+                    <Amount
+                      cents={cash}
+                      className={cn('font-medium', cash < 0 && 'text-negative')}
+                    />
+                  </dd>
+                </>
+              )}
               <dt className="text-muted-foreground">Aportado</dt>
               <dd>
                 <Amount cents={totalInvested} className="font-medium" />
@@ -238,6 +250,11 @@ export default async function InvestmentAccountPage({
                             >
                               {OPERATION_KIND_LABELS[o.kind as 'buy' | 'sell']}
                             </span>
+                            {!o.affects_cash && (
+                              <span className="hidden shrink-0 text-[0.6875rem] text-muted-foreground sm:inline">
+                                sin efectivo
+                              </span>
+                            )}
                             <span className="num min-w-0 flex-1 truncate text-muted-foreground">
                               {formatUnits(Number(o.units))}
                             </span>

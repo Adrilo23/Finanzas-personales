@@ -12,6 +12,7 @@ type Row = {
   description: string | null
   amount_cents: number
   currency: string
+  transfer_id: string | null
   accounts: { name: string }[] | { name: string } | null
   categories: { name: string; type: string }[] | { name: string; type: string } | null
 }
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from('transactions')
     .select(
-      'transaction_date, description, amount_cents, currency, accounts(name), categories(name, type)'
+      'transaction_date, description, amount_cents, currency, transfer_id, accounts(name), categories(name, type)'
     )
     .is('deleted_at', null)
     .order('transaction_date', { ascending: false })
@@ -61,7 +62,8 @@ export async function GET(request: NextRequest) {
     return [
       t.transaction_date,
       account?.name ?? '',
-      category?.name ?? '',
+      // Cada pata de un traspaso sale en su cuenta (es un libro de movimientos por cuenta).
+      t.transfer_id ? 'Traspaso' : (category?.name ?? ''),
       t.description ?? '',
       formatCents(t.amount_cents, t.currency),
     ]
