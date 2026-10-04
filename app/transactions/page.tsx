@@ -27,6 +27,16 @@ type SearchParams = {
   to?: string
 }
 
+function buildExportQuery(params: SearchParams, format: 'xlsx' | 'pdf') {
+  const query = new URLSearchParams()
+  if (params.accountId) query.set('accountId', params.accountId)
+  if (params.categoryId) query.set('categoryId', params.categoryId)
+  if (params.from) query.set('from', params.from)
+  if (params.to) query.set('to', params.to)
+  query.set('format', format)
+  return query.toString()
+}
+
 export default async function TransactionsPage({
   searchParams,
 }: {
@@ -69,6 +79,15 @@ export default async function TransactionsPage({
         categories={categories ?? []}
         current={params}
       />
+
+      <div className="flex gap-4 text-sm">
+        <a href={`/transactions/export?${buildExportQuery(params, 'xlsx')}`} className="underline">
+          Exportar a Excel
+        </a>
+        <a href={`/transactions/export?${buildExportQuery(params, 'pdf')}`} className="underline">
+          Exportar a PDF
+        </a>
+      </div>
 
       {rows.length === 0 ? (
         <p className="text-muted-foreground">No hay movimientos que coincidan con el filtro.</p>

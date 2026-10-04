@@ -47,6 +47,14 @@ export async function deleteAccount(id: string) {
   const { error } = await supabase.from('accounts').delete().eq('id', id)
 
   if (error) {
+    // 23503 = foreign_key_violation en Postgres: la cuenta tiene movimientos
+    // enlazados (transactions.account_id es ON DELETE RESTRICT a proposito).
+    if (error.code === '23503') {
+      return {
+        error:
+          'No se puede eliminar: esta cuenta tiene movimientos asociados, incluidos los ya eliminados (se conservan como historial a propósito). Para purgarlos definitivamente hace falta hacerlo desde la base de datos.',
+      }
+    }
     return { error: error.message }
   }
 
