@@ -1,10 +1,18 @@
-import { BanknoteIcon, CreditCardIcon, LandmarkIcon, WalletIcon, type LucideIcon } from 'lucide-react'
+import {
+  BanknoteIcon,
+  CreditCardIcon,
+  LandmarkIcon,
+  TrendingUpIcon,
+  WalletIcon,
+  type LucideIcon,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const ACCOUNT_TYPE_ICONS: Record<string, LucideIcon> = {
   bank: LandmarkIcon,
   cash: BanknoteIcon,
   card: CreditCardIcon,
+  investment: TrendingUpIcon,
   other: WalletIcon,
 }
 

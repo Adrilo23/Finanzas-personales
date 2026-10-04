@@ -28,6 +28,7 @@ const TYPE_OPTIONS = [
   { value: 'bank', label: 'Banco' },
   { value: 'card', label: 'Tarjeta' },
   { value: 'cash', label: 'Efectivo' },
+  { value: 'investment', label: 'Inversión' },
   { value: 'other', label: 'Otro' },
 ] as const
 
@@ -147,7 +148,11 @@ export function NewAccountDialog({
               aria-invalid={!!errors.initialBalance}
               {...register('initialBalance', { setValueAs: parseEurosInput })}
             />
-            <FieldHint>Lo que tiene la cuenta hoy, antes de registrar movimientos.</FieldHint>
+            <FieldHint className={type === 'investment' ? 'text-warning' : undefined}>
+              {type === 'investment'
+                ? 'Pon 0 si vas a añadir sus fondos: su valor sale de ellos y, si no, se contaría dos veces.'
+                : 'Lo que tiene la cuenta hoy, antes de registrar movimientos.'}
+            </FieldHint>
             <FieldError>{errors.initialBalance?.message}</FieldError>
           </Field>
 

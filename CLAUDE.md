@@ -61,6 +61,9 @@ Cada sección (`app/accounts`, `app/categories`, `app/transactions`, `app/recurr
 ### Relaciones embebidas de Supabase
 Los selects con joins (`categories(type)`, `accounts(name)`) pueden devolver un objeto o un array según los tipos. El patrón del proyecto es un helper local `first()` que normaliza ambos casos (está en `lib/recurring.ts`, `lib/reports.ts`, `lib/budgets.ts` y en la ruta de exportación).
 
+### Inversiones
+Las cuentas de tipo `investment` tienen activos (`holdings`: fondos por ISIN o criptomonedas) con sus compras/ventas (`holding_operations`, participaciones `numeric` introducidas a mano). El valor (participaciones × último precio) se calcula en SQL en la vista `holding_values` y se suma al saldo en `account_balances`; no lo calcules en JS. Los precios vienen de `lib/prices.ts` (interfaz `PriceProvider`, hoy la API no oficial de Yahoo, no apta para uso comercial) y se guardan por usuario en `asset_prices`. `refreshStalePrices` se ejecuta junto a los recurrentes en `components/app-nav.tsx` y solo consulta la fuente si un activo lleva más de 6 h sin refrescar. La lógica pura (ISIN, participaciones, parseo de respuestas) está en `lib/investments.ts`, con tests.
+
 ### Adjuntos
 Se guardan en el bucket privado `attachments` con la ruta `{user_id}/{transaction_id}/archivo`; la política de Storage exige que la primera carpeta sea `auth.uid()`. Al borrar, se elimina primero el archivo de Storage y después la fila (`app/transactions/attachments-actions.ts`).
 

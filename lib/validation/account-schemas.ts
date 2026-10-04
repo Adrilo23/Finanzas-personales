@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 export const accountSchema = z.object({
   name: z.string().min(1, 'El nombre es obligatorio').max(60),
-  type: z.enum(['bank', 'cash', 'card', 'other']),
+  type: z.enum(['bank', 'cash', 'card', 'investment', 'other']),
   currency: z.string().length(3),
   initialBalance: z.number().min(0, 'No puede ser negativo'),
 })
@@ -13,5 +13,6 @@ export const ACCOUNT_TYPE_LABELS: Record<AccountInput['type'], string> = {
   bank: 'Cuenta bancaria',
   cash: 'Efectivo',
   card: 'Tarjeta',
+  investment: 'Cuenta de inversión',
   other: 'Otro',
 }

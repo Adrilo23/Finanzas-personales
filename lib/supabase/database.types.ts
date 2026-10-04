@@ -44,6 +44,33 @@ export type Database = {
         }
         Relationships: []
       }
+      asset_prices: {
+        Row: {
+          currency: string
+          fetched_at: string
+          price: number
+          price_date: string
+          symbol: string
+          user_id: string
+        }
+        Insert: {
+          currency?: string
+          fetched_at?: string
+          price: number
+          price_date: string
+          symbol: string
+          user_id: string
+        }
+        Update: {
+          currency?: string
+          fetched_at?: string
+          price?: number
+          price_date?: string
+          symbol?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       attachments: {
         Row: {
           file_name: string
@@ -145,6 +172,108 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      holding_operations: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          holding_id: string
+          id: string
+          kind: string
+          operation_date: string
+          units: number
+          user_id: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          holding_id: string
+          id?: string
+          kind: string
+          operation_date: string
+          units: number
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          holding_id?: string
+          id?: string
+          kind?: string
+          operation_date?: string
+          units?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "holding_operations_holding_id_fkey"
+            columns: ["holding_id"]
+            isOneToOne: false
+            referencedRelation: "holding_values"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "holding_operations_holding_id_fkey"
+            columns: ["holding_id"]
+            isOneToOne: false
+            referencedRelation: "holdings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      holdings: {
+        Row: {
+          account_id: string
+          asset_type: string
+          created_at: string
+          currency: string
+          id: string
+          isin: string | null
+          name: string
+          prices_checked_at: string | null
+          symbol: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          asset_type: string
+          created_at?: string
+          currency?: string
+          id?: string
+          isin?: string | null
+          name: string
+          prices_checked_at?: string | null
+          symbol: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          asset_type?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          isin?: string | null
+          name?: string
+          prices_checked_at?: string | null
+          symbol?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "holdings_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "account_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "holdings_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -293,11 +422,68 @@ export type Database = {
           currency: string | null
           id: string | null
           initial_balance_cents: number | null
+          market_value_cents: number | null
           name: string | null
           type: string | null
           user_id: string | null
         }
+        Insert: {
+          balance_cents?: never
+          created_at?: string | null
+          currency?: string | null
+          id?: string | null
+          initial_balance_cents?: number | null
+          market_value_cents?: never
+          name?: string | null
+          type?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          balance_cents?: never
+          created_at?: string | null
+          currency?: string | null
+          id?: string | null
+          initial_balance_cents?: number | null
+          market_value_cents?: never
+          name?: string | null
+          type?: string | null
+          user_id?: string | null
+        }
         Relationships: []
+      }
+      holding_values: {
+        Row: {
+          account_id: string | null
+          asset_type: string | null
+          currency: string | null
+          gain_cents: number | null
+          id: string | null
+          invested_cents: number | null
+          isin: string | null
+          name: string | null
+          price: number | null
+          price_date: string | null
+          symbol: string | null
+          units: number | null
+          user_id: string | null
+          value_cents: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "holdings_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "account_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "holdings_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {

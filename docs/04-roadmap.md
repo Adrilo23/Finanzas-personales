@@ -4,7 +4,7 @@
 >
 > **Fuente de verdad:** este archivo del repo (GitHub `Adrilo23/Finanzas-personales`). Claude Code lo actualiza al terminar cada tarea, en el mismo commit que el código.
 
-## Estado actual: 🟢 Fase 1 y Fase 3 completas, con tests y CI → siguiente: cuentas de inversión con fondos (Fase 3b, tanda 1)
+## Estado actual: 🟢 Fase 1 y Fase 3 completas, con tests y CI → siguiente: transferencias y plan de aportación periódica (Fase 3b), o la actualización diaria programada
 
 Última actualización: 2026-10-04
 
@@ -54,17 +54,19 @@ Idea surgida al usar la app: una cuenta como MyInvestor contiene fondos cuyo val
 
 **Orden acordado:** primero cuentas de inversión con sus fondos (lo que hace falta ya para MyInvestor); después la actualización diaria programada; después las transferencias.
 
-- [ ] **Tanda 1 — Cuentas de inversión con fondos**
-  - Tipo de cuenta `investment`
-  - Fondos por cuenta (`holdings`): ISIN, nombre y código de Yahoo, resueltos al introducir el ISIN
-  - Operaciones por fondo (`holding_operations`): compra/venta, fecha, participaciones (`numeric`, con decimales) e importe en céntimos. Participaciones introducidas desde el bróker (dato exacto); cálculo importe ÷ valor liquidativo como alternativa
-  - Precios compartidos (`fund_prices`: ISIN, fecha, valor liquidativo), refrescados al abrir la cuenta si tienen más de un día
-  - Valor = Σ participaciones × último valor liquidativo, calculado en SQL con `numeric` y redondeado a céntimos. Pantalla de detalle de la cuenta con valor, aportado y plusvalía (€ y %) por fondo y en total; el valor cuenta en el saldo total del inicio
+- [x] **Tanda 1 — Cuentas de inversión con activos** (migración `0007`)
+  - Tipo de cuenta `investment`; pantalla de detalle `/accounts/[id]` con valor, aportado y rentabilidad (€ y %) por activo y en total; el valor cuenta en el saldo de la cuenta y en el total del inicio
+  - Activos: fondos por ISIN (validado con dígito de control) y **criptomonedas** por código (p. ej. BTC → `BTC-EUR`, para Kraken). Nombre y código de precios resueltos automáticamente; solo activos en euros
+  - Compras y ventas con participaciones introducidas a mano desde el bróker (decisión 2026-10-04); no se puede vender más de lo que se tiene
+  - Precios refrescados al cargar la app si llevan más de 6 h sin consultarse, y al añadir un activo (últimos 3 meses). Fuente detrás de la interfaz `PriceProvider` (`lib/prices.ts`)
+  - Precios guardados por usuario (`asset_prices`) para no necesitar todavía la service role key
+  - Al convertir una cuenta existente (p. ej. My Investor, que tenía todo en el saldo inicial) a tipo Inversión, poner el saldo inicial a 0 antes de añadir los fondos, o se contará dos veces (el formulario lo avisa)
 - [ ] **Tanda 2 — Actualización diaria programada** (Vercel Cron o Supabase pg_cron + Edge Function), con la fuente detrás de una interfaz `PriceProvider` intercambiable
   - Requiere `SUPABASE_SERVICE_ROLE_KEY` y una clave de cron en Vercel, solo en servidor. Es la única excepción a "todo con anon key + RLS": la tabla de precios no tiene datos personales y los usuarios solo la leen
   - Uso personal/amigos: fuente gratuita (API no oficial de Yahoo). **Antes de vender: proveedor de datos con licencia comercial**
   - Cobertura comprobada en Yahoo (2026-10-04), los tres en EUR y con valor liquidativo diario (desfase normal de 1 día hábil): Fidelity MSCI World Index P-Acc (`IE00BYX5NX33` → `0P0001CLDK.F`), Amundi IS Core MSCI Emerging Markets IE-C (`LU0996175948` → `0P00011MU2.F`) y Groupama Trésorerie IC (`FR0000989626` → `0P00000LRT.F`)
 - [ ] **Tanda 3 — Transferencias entre cuentas** (origen → destino): dos movimientos enlazados, sin categoría; mueven saldos pero no cuentan como ingreso, gasto ni presupuesto. Admiten recurrencia (aportación mensual). Una aportación quedaría como transferencia banco → cuenta de inversión + compra del fondo
+- [ ] **Plan de aportación periódica** (flujo real de Adrián: cada mes 500 € de BBVA a MyInvestor repartidos entre MSCI World y Emergentes, y 50 € de BBVA a Kraken en Bitcoin). Una regla recurrente que, en su fecha, genera la transferencia origen → cuenta de inversión y una **compra pendiente** por cada activo según el reparto. Como las participaciones se conocen cuando el bróker ejecuta la orden (los fondos, con un día de retraso), la compra queda "pendiente de confirmar": se muestra con las participaciones estimadas (importe ÷ último precio) y se confirman con un toque o se corrigen con las reales. Depende de la tanda 3
 - [ ] Revisar la categoría `investment` cuando existan las transferencias: hasta entonces, lo registrado como gasto de inversión se deja como está
 
 ## Fase 4 — Pulido y preparación para portfolio/LinkedIn

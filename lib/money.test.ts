@@ -4,6 +4,8 @@ import {
   centsToEuros,
   eurosToCents,
   formatCents,
+  formatPrice,
+  formatUnits,
   parseEurosInput,
 } from './money'
 
@@ -84,5 +86,19 @@ describe('formatCents', () => {
     expect(fmt(1234567)).toBe('12.345,67 €')
     expect(fmt(-1250)).toBe('-12,50 €')
     expect(fmt(5)).toBe('0,05 €')
+  })
+})
+
+describe('formatPrice y formatUnits', () => {
+  test('precios con hasta 4 decimales', () => {
+    expect(formatPrice(14.4165).replace(/ /g, ' ')).toBe('14,4165 €')
+    expect(formatPrice(75893.83).replace(/ /g, ' ')).toBe('75.893,83 €')
+    expect(formatPrice(272.9).replace(/ /g, ' ')).toBe('272,90 €')
+  })
+
+  test('participaciones con hasta 8 decimales', () => {
+    expect(formatUnits(12.345678)).toBe('12,345678')
+    expect(formatUnits(0.00065)).toBe('0,00065')
+    expect(formatUnits(1500)).toBe('1500')
   })
 })

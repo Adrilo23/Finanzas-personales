@@ -55,3 +55,18 @@ export function applyCategorySign(cents: number, categoryType: string | null | u
   const abs = Math.abs(cents)
   return categoryType === 'income' ? abs : -abs
 }
+
+/** Precio unitario (valor liquidativo, cotización): hasta 4 decimales, sin redondear a céntimos. */
+export function formatPrice(price: number, currency = 'EUR'): string {
+  return new Intl.NumberFormat('es-ES', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 4,
+  }).format(price)
+}
+
+/** Participaciones o unidades de cripto: hasta 8 decimales, sin ceros sobrantes. */
+export function formatUnits(units: number): string {
+  return new Intl.NumberFormat('es-ES', { maximumFractionDigits: 8 }).format(units)
+}

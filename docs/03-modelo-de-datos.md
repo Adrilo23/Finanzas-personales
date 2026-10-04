@@ -4,7 +4,7 @@ Modelo orientado a PostgreSQL (Supabase), pensado como un *ledger* (libro de mov
 
 > **Fuente de verdad:** las migraciones de `supabase/migrations/` y los tipos generados en `lib/supabase/database.types.ts` (`npm run db:types`). Este documento las resume. Cualquier cambio de esquema se hace con una migración nueva numerada y se refleja aquí en el mismo commit.
 >
-> Última revisión contra las migraciones: 2026-10-04 (hasta `0006`).
+> Última revisión contra las migraciones: 2026-10-04 (hasta `0007`).
 
 ## Convenciones
 
@@ -27,7 +27,7 @@ Dónde está el dinero: cuenta bancaria, efectivo, tarjeta…
 | id | uuid | PK |
 | user_id | uuid | FK → auth.users, RLS |
 | name | text | "Cuenta corriente", "Efectivo"… |
-| type | text | `bank`, `cash`, `card`, `other` |
+| type | text | `bank`, `cash`, `card`, `investment` (desde `0007`), `other` |
 | currency | text | ISO 4217, por defecto `EUR` |
 | initial_balance_cents | bigint | saldo inicial en céntimos |
 | created_at | timestamptz | |
@@ -110,6 +110,52 @@ Un límite mensual por categoría de gasto; se reinicia cada mes (no hay histór
 
 `unique (user_id, category_id)`: un presupuesto por categoría; guardar otro para la misma categoría sustituye el importe (`upsert`). La FK no pasa por RLS, así que la Server Action comprueba que la categoría es del usuario y de tipo `expense`. Lo gastado se calcula en `lib/budgets.ts`: movimientos de gasto del mes en curso, **sumando los de las subcategorías al padre**. Avisos: «Cerca del límite» desde el 80 %, «Superado» por encima del 100 %.
 
+### Inversiones — `0007`
+Una cuenta de tipo `investment` (MyInvestor, Kraken…) contiene **activos**: fondos (con ISIN) o criptomonedas (sin ISIN). Todos se identifican por su código en la fuente de precios (`symbol`), y las participaciones las introduce el usuario desde su bróker.
+
+**holdings** — activos de cada cuenta
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| user_id | uuid | FK, RLS |
+| account_id | uuid | FK → accounts, `on delete cascade` |
+| asset_type | text | `fund`, `crypto` |
+| isin | text \| null | obligatorio si `fund`; validado (formato y dígito de control) en la app y con regex en BD |
+| symbol | text | código en la fuente de precios (`0P0001CLDK.F`, `BTC-EUR`) |
+| name | text | resuelto desde la fuente al añadirlo |
+| currency | text | de momento solo `EUR` (se rechazan activos en otra moneda) |
+| prices_checked_at | timestamptz \| null | último intento de refrescar precios (se reintenta cada 6 h) |
+| created_at | timestamptz | |
+
+`unique (account_id, symbol)`.
+
+**holding_operations** — compras y ventas
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| user_id | uuid | FK, RLS |
+| holding_id | uuid | FK → holdings, `on delete cascade` |
+| operation_date | date | |
+| kind | text | `buy`, `sell` |
+| units | numeric(20, 8) | participaciones o unidades de cripto, `> 0` |
+| amount_cents | bigint | importe pagado o recibido, `> 0` |
+| created_at | timestamptz | |
+
+**asset_prices** — precio diario (valor liquidativo o cierre), **por usuario** en esta fase
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| user_id | uuid | FK, RLS |
+| symbol | text | |
+| price_date | date | |
+| price | numeric(20, 8) | redondeado a 6 decimales al descargarlo |
+| currency | text | |
+| fetched_at | timestamptz | |
+
+PK `(user_id, symbol, price_date)`. Es por usuario porque la app lo rellena con la sesión del propio usuario: una tabla compartida permitiría escribir precios que verían otros. Al pasar a la actualización programada con service role (roadmap, Fase 3b tanda 2) se podrá compartir.
+
 ### subscriptions (reservada, futuro SaaS)
 Sin implementar; solo reservada en el diseño.
 
@@ -124,11 +170,13 @@ categories 1───N transactions
 recurring_rules 1───N transactions
 transactions 1───N attachments
 categories 1───1 budgets (opcional)
+accounts 1───N holdings 1───N holding_operations
 ```
 
 ## Vistas y cálculos derivados
 
-- **`account_balances`** (`0002`, `security_invoker`): saldo por cuenta = `initial_balance_cents` + suma de `amount_cents` de sus movimientos no borrados. Las columnas de la vista salen anulables en los tipos generados.
+- **`account_balances`** (`0002`, recreada en `0007`, `security_invoker`): saldo por cuenta = `initial_balance_cents` + movimientos no borrados + **valor de mercado de sus activos** (`market_value_cents`, también como columna aparte). Las columnas de la vista salen anulables en los tipos generados.
+- **`holding_values`** (`0007`, `security_invoker`): por activo, participaciones netas (compras − ventas), aportado neto (`invested_cents`), último precio y fecha, `value_cents = round(participaciones × precio × 100)` y `gain_cents = valor − aportado`, todo en `numeric` y redondeado a céntimos en SQL.
 - Totales por categoría y periodo, e ingresos frente a gastos por mes: se calculan en el servidor (`app/page.tsx`, `lib/reports.ts`), no en tablas.
 
 ## Diferencias con el diseño inicial
