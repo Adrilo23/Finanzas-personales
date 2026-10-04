@@ -162,3 +162,34 @@ export async function deleteOperation(id: string, accountId: string) {
   revalidateInvestmentViews(accountId)
   return { success: true }
 }
+
+/** Confirma una compra pendiente (de un plan de aportación) con los datos reales del bróker. */
+export async function confirmOperation(id: string, accountId: string, formData: FormData) {
+  const units = roundUnits(Number(formData.get('units')))
+  const amount = Number(formData.get('amount'))
+  if (!(units > 0)) {
+    return { error: 'Indica las participaciones (mayor que 0)' }
+  }
+  if (!(amount > 0)) {
+    return { error: 'El importe debe ser mayor que 0' }
+  }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('holding_operations')
+    .update({ units, amount_cents: eurosToCents(amount), status: 'confirmed' })
+    .eq('id', id)
+    .eq('status', 'pending')
+    .select('id')
+    .maybeSingle()
+
+  if (error) {
+    return { error: error.message }
+  }
+  if (!data) {
+    return { error: 'La operación ya estaba confirmada o no existe' }
+  }
+
+  revalidateInvestmentViews(accountId)
+  return { success: true }
+}

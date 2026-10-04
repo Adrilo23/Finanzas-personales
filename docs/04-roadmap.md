@@ -4,7 +4,7 @@
 >
 > **Fuente de verdad:** este archivo del repo (GitHub `Adrilo23/Finanzas-personales`). Claude Code lo actualiza al terminar cada tarea, en el mismo commit que el código.
 
-## Estado actual: 🟢 Fase 1 y Fase 3 completas, con tests y CI → siguiente: plan de aportación periódica (Fase 3b)
+## Estado actual: 🟢 Fase 1 y Fase 3 completas, con tests y CI → Fase 3b completa salvo la actualización diaria programada; siguiente: ayuda para nuevos usuarios (Fase 4) o actualización programada de precios
 
 Última actualización: 2026-10-04
 
@@ -70,7 +70,7 @@ Idea surgida al usar la app: una cuenta como MyInvestor contiene fondos cuyo val
   - En Movimientos se ven una vez ("BBVA → My Investor"); filtrando por una cuenta se ve su pata con signo, porque para esa cuenta sí es entrada o salida
   - Traspasos recurrentes: nueva opción "Traspaso" en Recurrentes
   - Efectivo en las cuentas de inversión: las compras lo consumen y las ventas lo devuelven; las posiciones ya registradas se marcaron como "sin efectivo". El formulario de operación permite desmarcarlo para posiciones previas
-- [ ] **Plan de aportación periódica** (flujo real de Adrián: cada mes 500 € de BBVA a MyInvestor repartidos entre MSCI World y Emergentes, y 50 € de BBVA a Kraken en Bitcoin). Una regla recurrente que, en su fecha, genera la transferencia origen → cuenta de inversión y una **compra pendiente** por cada activo según el reparto. Como las participaciones se conocen cuando el bróker ejecuta la orden (los fondos, con un día de retraso), la compra queda "pendiente de confirmar": se muestra con las participaciones estimadas (importe ÷ último precio) y se confirman con un toque o se corrigen con las reales. Depende de la tanda 3
+- [x] **Plan de aportación periódica** (migración `0009`): un traspaso recurrente con "Repartir en activos". En cada vencimiento genera, de forma atómica, el traspaso (p. ej. BBVA → My Investor 500 €), los traspasos a otras cuentas si un activo vive en otra (My Investor → Kraken 50 €) y una **compra pendiente** por activo con participaciones estimadas. Las pendientes se ven en el activo y en un aviso en el inicio, y se confirman con las participaciones reales del bróker
 - [ ] Revisar la categoría `investment` cuando existan las transferencias: hasta entonces, lo registrado como gasto de inversión se deja como está
 
 ## Fase 4 — Pulido y preparación para portfolio/LinkedIn

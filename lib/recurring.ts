@@ -1,7 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import { applyCategorySign } from '@/lib/money'
-import { buildTransferRows } from '@/lib/transfers'
-import type { TablesInsert } from '@/lib/supabase/database.types'
 import {
   addMonths,
   addWeeks,
@@ -101,39 +99,32 @@ export async function processRecurringRules(userId: string) {
 
     if (datesToInsert.length === 0) continue
 
-    // Traspaso: dos movimientos enlazados por fecha. Movimiento normal: uno, con el
-    // signo que corresponde a su categoría.
-    const toAccountId = rule.to_account_id
-    const rows: TablesInsert<'transactions'>[] = toAccountId
-      ? datesToInsert.flatMap((date) =>
-          buildTransferRows({
-            userId,
-            transferId: crypto.randomUUID(),
-            fromAccountId: rule.account_id,
-            toAccountId,
-            amountCents: rule.amount_cents,
-            date,
-            recurringRuleId: rule.id,
-          })
-        )
-      : datesToInsert.map((transaction_date) => ({
-          user_id: userId,
-          account_id: rule.account_id,
-          category_id: rule.category_id,
-          amount_cents: signedCents,
-          currency: 'EUR',
-          description: null,
-          transaction_date,
-          recurring_rule_id: rule.id,
-        }))
+    // Traspaso (con o sin reparto en activos): lo genera la función SQL
+    // run_contribution_plan de forma atómica, incluida la nueva fecha.
+    if (rule.to_account_id) {
+      await supabase.rpc('run_contribution_plan', {
+        p_rule_id: rule.id,
+        p_dates: datesToInsert,
+        p_next: next,
+      })
+      continue
+    }
 
-    const { error } = await supabase.from('transactions').insert(rows)
+    const { error } = await supabase.from('transactions').insert(
+      datesToInsert.map((transaction_date) => ({
+        user_id: userId,
+        account_id: rule.account_id,
+        category_id: rule.category_id,
+        amount_cents: signedCents,
+        currency: 'EUR',
+        description: null,
+        transaction_date,
+        recurring_rule_id: rule.id,
+      }))
+    )
     // Si falla, no se adelanta la fecha: se reintentará en la siguiente carga.
     if (error) continue
 
-    await supabase
-      .from('recurring_rules')
-      .update({ next_run_date: next })
-      .eq('id', rule.id)
+    await supabase.from('recurring_rules').update({ next_run_date: next }).eq('id', rule.id)
   }
 }

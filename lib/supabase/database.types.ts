@@ -185,7 +185,9 @@ export type Database = {
           id: string
           kind: string
           operation_date: string
-          units: number
+          recurring_rule_id: string | null
+          status: string
+          units: number | null
           user_id: string
         }
         Insert: {
@@ -196,7 +198,9 @@ export type Database = {
           id?: string
           kind: string
           operation_date: string
-          units: number
+          recurring_rule_id?: string | null
+          status?: string
+          units?: number | null
           user_id: string
         }
         Update: {
@@ -207,7 +211,9 @@ export type Database = {
           id?: string
           kind?: string
           operation_date?: string
-          units?: number
+          recurring_rule_id?: string | null
+          status?: string
+          units?: number | null
           user_id?: string
         }
         Relationships: [
@@ -223,6 +229,13 @@ export type Database = {
             columns: ["holding_id"]
             isOneToOne: false
             referencedRelation: "holdings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "holding_operations_recurring_rule_id_fkey"
+            columns: ["recurring_rule_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_rules"
             referencedColumns: ["id"]
           },
         ]
@@ -277,6 +290,55 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurring_allocations: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          holding_id: string
+          id: string
+          rule_id: string
+          user_id: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          holding_id: string
+          id?: string
+          rule_id: string
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          holding_id?: string
+          id?: string
+          rule_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_allocations_holding_id_fkey"
+            columns: ["holding_id"]
+            isOneToOne: false
+            referencedRelation: "holding_values"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_allocations_holding_id_fkey"
+            columns: ["holding_id"]
+            isOneToOne: false
+            referencedRelation: "holdings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_allocations_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_rules"
             referencedColumns: ["id"]
           },
         ]
@@ -489,6 +551,10 @@ export type Database = {
       }
     }
     Functions: {
+      run_contribution_plan: {
+        Args: { p_dates: string[]; p_next: string; p_rule_id: string }
+        Returns: undefined
+      }
       update_transfer: {
         Args: {
           p_amount_cents: number

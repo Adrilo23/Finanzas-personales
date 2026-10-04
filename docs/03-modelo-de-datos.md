@@ -4,7 +4,7 @@ Modelo orientado a PostgreSQL (Supabase), pensado como un *ledger* (libro de mov
 
 > **Fuente de verdad:** las migraciones de `supabase/migrations/` y los tipos generados en `lib/supabase/database.types.ts` (`npm run db:types`). Este documento las resume. Cualquier cambio de esquema se hace con una migración nueva numerada y se refleja aquí en el mismo commit.
 >
-> Última revisión contra las migraciones: 2026-10-04 (hasta `0008`).
+> Última revisión contra las migraciones: 2026-10-04 (hasta `0009`).
 
 ## Convenciones
 
@@ -142,9 +142,11 @@ Una cuenta de tipo `investment` (MyInvestor, Kraken…) contiene **activos**: fo
 | holding_id | uuid | FK → holdings, `on delete cascade` |
 | operation_date | date | |
 | kind | text | `buy`, `sell` |
-| units | numeric(20, 8) | participaciones o unidades de cripto, `> 0` |
+| units | numeric(20, 8) \| null | participaciones o unidades de cripto, `> 0`; solo null en compras pendientes sin estimar |
 | amount_cents | bigint | importe pagado o recibido, `> 0` |
 | affects_cash | boolean | `0008`: la compra se paga con (o la venta se cobra en) el efectivo de la cuenta. Las posiciones registradas antes de existir los traspasos se migraron a `false` |
+| status | text | `pending` / `confirmed` (`0009`). Las compras que genera un plan de aportación nacen `pending` con participaciones estimadas (o null si no había precio) |
+| recurring_rule_id | uuid \| null | plan que la generó (`0009`) |
 | created_at | timestamptz | |
 
 **asset_prices** — precio diario (valor liquidativo o cierre), **por usuario** en esta fase
@@ -159,6 +161,19 @@ Una cuenta de tipo `investment` (MyInvestor, Kraken…) contiene **activos**: fo
 | fetched_at | timestamptz | |
 
 PK `(user_id, symbol, price_date)`. Es por usuario porque la app lo rellena con la sesión del propio usuario: una tabla compartida permitiría escribir precios que verían otros. Al pasar a la actualización programada con service role (roadmap, Fase 3b tanda 2) se podrá compartir.
+
+### recurring_allocations (reparto de un plan de aportación) — `0009`
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| id | uuid | PK |
+| user_id | uuid | FK, RLS |
+| rule_id | uuid | FK → recurring_rules (un traspaso recurrente), `on delete cascade` |
+| holding_id | uuid | FK → holdings, `on delete cascade` |
+| amount_cents | bigint | `> 0`; la suma no puede superar el importe del traspaso (lo que sobra queda como efectivo) |
+| created_at | timestamptz | |
+
+`unique (rule_id, holding_id)`. La función `run_contribution_plan(p_rule_id, p_dates, p_next)` (atómica, `security invoker`) genera en cada vencimiento: el traspaso de la regla; un traspaso destino → cuenta del activo si el activo está en otra cuenta; y una compra pendiente por activo con participaciones = importe ÷ último precio. Al final adelanta `next_run_date`.
 
 ### subscriptions (reservada, futuro SaaS)
 Sin implementar; solo reservada en el diseño.

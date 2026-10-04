@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { endOfMonth, format, startOfMonth, subMonths } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { ArrowRightIcon, CheckIcon } from 'lucide-react'
+import { ArrowRightIcon, CheckIcon, ClockIcon } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { formatDayHeading, formatMonthYear } from '@/lib/format'
 import { PageHeader, PageShell } from '@/components/page-header'
@@ -62,6 +62,7 @@ export default async function DashboardPage() {
     { data: recentData },
     { data: categories },
     budgets,
+    { data: pendingOps },
   ] = await Promise.all([
     supabase
       .from('transactions')
@@ -84,6 +85,7 @@ export default async function DashboardPage() {
       .limit(10),
     supabase.from('categories').select('id, name, type').order('name', { ascending: true }),
     getBudgetProgress(now),
+    supabase.from('holding_operations').select('id, holdings(account_id)').eq('status', 'pending'),
   ])
 
   const rows = (monthData ?? []) as MonthRow[]
@@ -140,6 +142,10 @@ export default async function DashboardPage() {
     .sort((a, b) => budgetOrder[a.status] - budgetOrder[b.status] || b.ratio - a.ratio)
     .slice(0, 4)
   const budgetAlerts = budgets.filter((b) => b.status !== 'ok').length
+
+  // Compras de planes de aportación pendientes de confirmar con el bróker.
+  const pendingCount = pendingOps?.length ?? 0
+  const pendingAccountId = first(pendingOps?.[0]?.holdings ?? null)?.account_id
 
   const prevMonthShort = format(subMonths(now, 1), 'MMM', { locale: es }).replace('.', '')
 
@@ -224,6 +230,27 @@ export default async function DashboardPage() {
         description="Resumen del mes en curso"
         actions={<NewTransactionDialog accounts={accountOptions} categories={categoryOptions} />}
       />
+
+      {pendingCount > 0 && pendingAccountId && (
+        <Link
+          href={`/accounts/${pendingAccountId}`}
+          className="group flex items-center gap-3 rounded-xl bg-warning-soft px-4 py-3 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+        >
+          <ClockIcon aria-hidden className="size-4 shrink-0 text-warning" />
+          <span className="flex-1">
+            {pendingCount === 1
+              ? 'Tienes 1 compra de tu plan de aportación pendiente de confirmar.'
+              : `Tienes ${pendingCount} compras de tu plan de aportación pendientes de confirmar.`}
+          </span>
+          <span className="flex shrink-0 items-center gap-1 font-medium">
+            Revisar
+            <ArrowRightIcon
+              aria-hidden
+              className="size-3.5 transition-transform duration-150 group-hover:translate-x-0.5"
+            />
+          </span>
+        </Link>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
         {/* Balance del mes */}

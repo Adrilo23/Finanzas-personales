@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeftIcon, BitcoinIcon, ChartLineIcon, PlusIcon } from 'lucide-react'
+import { ArrowLeftIcon, BitcoinIcon, ChartLineIcon, ClockIcon, PlusIcon } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { formatCents, formatPrice, formatUnits } from '@/lib/money'
 import { gainPercent } from '@/lib/investments'
@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils'
 import { AddHoldingDialog } from './add-holding-dialog'
 import { OperationDialog } from './operation-dialog'
 import { DeleteHoldingButton, DeleteOperationButton } from './delete-buttons'
+import { ConfirmOperationDialog } from './confirm-operation-dialog'
 
 export const metadata: Metadata = { title: 'Cuenta de inversión' }
 
@@ -75,7 +76,7 @@ export default async function InvestmentAccountPage({
     holdings.length > 0
       ? await supabase
           .from('holding_operations')
-          .select('id, holding_id, operation_date, kind, units, amount_cents, affects_cash')
+          .select('id, holding_id, operation_date, kind, units, amount_cents, affects_cash, status')
           .in(
             'holding_id',
             holdings.map((h) => h.id)
@@ -88,6 +89,7 @@ export default async function InvestmentAccountPage({
   const totalInvested = holdings.reduce((sum, h) => sum + (h.invested_cents ?? 0), 0)
   const totalGain = totalValue - totalInvested
   const cash = account.cash_cents ?? 0
+  const pendingCount = (operations ?? []).filter((o) => o.status === 'pending').length
   const priceDates = holdings.map((h) => h.price_date).filter((d): d is string => Boolean(d))
   const oldestPriceDate = priceDates.sort()[0]
 
@@ -107,6 +109,16 @@ export default async function InvestmentAccountPage({
           actions={holdings.length > 0 ? <AddHoldingDialog accountId={id} /> : undefined}
         />
       </div>
+
+      {pendingCount > 0 && (
+        <p className="flex items-center gap-2 rounded-xl bg-warning-soft px-4 py-3 text-sm">
+          <ClockIcon aria-hidden className="size-4 shrink-0 text-warning" />
+          {pendingCount === 1
+            ? 'Tienes 1 compra pendiente de confirmar.'
+            : `Tienes ${pendingCount} compras pendientes de confirmar.`}{' '}
+          Revisa las participaciones cuando tu bróker ejecute la orden.
+        </p>
+      )}
 
       {holdings.length === 0 ? (
         <EmptyState
@@ -159,7 +171,9 @@ export default async function InvestmentAccountPage({
 
           <ul className="space-y-3">
             {holdings.map((h) => {
-              const ops = (operations ?? []).filter((o) => o.holding_id === h.id)
+              const allOps = (operations ?? []).filter((o) => o.holding_id === h.id)
+              const pendingOps = allOps.filter((o) => o.status === 'pending')
+              const ops = allOps.filter((o) => o.status !== 'pending')
               const isCrypto = h.asset_type === 'crypto'
               const Icon = isCrypto ? BitcoinIcon : ChartLineIcon
               const units = Number(h.units ?? 0)
@@ -219,6 +233,36 @@ export default async function InvestmentAccountPage({
                       <DeleteHoldingButton id={h.id} accountId={id} name={h.name ?? ''} />
                     </div>
                   </div>
+
+                  {pendingOps.length > 0 && (
+                    <ul className="divide-y divide-border/60 border-t border-border/70 bg-warning-soft/60">
+                      {pendingOps.map((o) => (
+                        <li
+                          key={o.id}
+                          className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5 pr-3 pl-4 text-[0.8125rem] sm:pl-5"
+                        >
+                          <span className="font-medium text-warning">Pendiente</span>
+                          <span className="text-muted-foreground">
+                            {formatShortDate(o.operation_date)}
+                          </span>
+                          <span className="num min-w-0 flex-1 truncate text-muted-foreground">
+                            {o.units != null ? `≈ ${formatUnits(Number(o.units))}` : 'sin estimar'}
+                          </span>
+                          <Amount cents={o.amount_cents} className="font-medium" />
+                          <ConfirmOperationDialog
+                            operationId={o.id}
+                            accountId={id}
+                            holdingName={h.name ?? ''}
+                            isCrypto={isCrypto}
+                            date={o.operation_date}
+                            amountCents={o.amount_cents}
+                            estimatedUnits={o.units != null ? Number(o.units) : null}
+                          />
+                          <DeleteOperationButton id={o.id} accountId={id} />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
 
                   {ops.length > 0 && (
                     <details className="group border-t border-border/70">

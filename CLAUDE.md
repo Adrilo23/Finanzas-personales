@@ -58,6 +58,8 @@ Cada sección (`app/accounts`, `app/categories`, `app/transactions`, `app/recurr
 ### Traspasos
 Un traspaso entre cuentas son dos filas de `transactions` con el mismo `transfer_id` y sin categoría (`lib/transfers.ts`). Al no tener categoría, todos los totales por tipo, los informes y los presupuestos los ignoran solos. En listas sin filtro de cuenta, oculta la pata de entrada (`isHiddenTransferLeg`) y no los cuentes como entradas ni salidas. Se editan con la RPC `update_transfer` y se borran ambas patas. `recurring_rules.to_account_id` convierte una regla en traspaso periódico.
 
+Un traspaso recurrente con filas en `recurring_allocations` es un **plan de aportación**: `processRecurringRules` delega todos los traspasos recurrentes en la RPC `run_contribution_plan` (atómica: traspasos, compras pendientes y nueva fecha). Las compras pendientes (`holding_operations.status = 'pending'`) se confirman con `confirmOperation`.
+
 **Ojo con los embeds:** `recurring_rules` tiene dos FK a `accounts`, así que `accounts(name)` es ambiguo y PostgREST devuelve error; usa `accounts!recurring_rules_account_id_fkey(name)`. Revisa los embeds cada vez que añadas una segunda FK a una tabla.
 
 ### Movimientos recurrentes

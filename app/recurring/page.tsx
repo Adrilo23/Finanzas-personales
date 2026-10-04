@@ -3,7 +3,7 @@ import { RepeatIcon } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { FREQUENCY_LABELS } from '@/lib/validation/recurring-schemas'
 import { formatShortDate } from '@/lib/format'
-import { applyCategorySign } from '@/lib/money'
+import { applyCategorySign, formatCents } from '@/lib/money'
 import { PageHeader, PageShell } from '@/components/page-header'
 import { EmptyState } from '@/components/empty-state'
 import { Amount } from '@/components/amount'
@@ -37,7 +37,13 @@ function first<T>(value: T[] | T | null): T | null {
 export default async function RecurringPage() {
   const supabase = await createClient()
 
-  const [{ data: rules }, { data: accounts }, { data: categories }] = await Promise.all([
+  const [
+    { data: rules },
+    { data: accounts },
+    { data: categories },
+    { data: holdingRows },
+    { data: allocationRows },
+  ] = await Promise.all([
     supabase
       .from('recurring_rules')
       .select(
@@ -45,9 +51,28 @@ export default async function RecurringPage() {
         'id, amount_cents, frequency, next_run_date, active, to_account_id, account:accounts!recurring_rules_account_id_fkey(name), to_account:accounts!recurring_rules_to_account_id_fkey(name), categories(name, type, icon)'
       )
       .order('next_run_date', { ascending: true }),
-    supabase.from('accounts').select('id, name').order('created_at', { ascending: true }),
+    supabase.from('accounts').select('id, name, type').order('created_at', { ascending: true }),
     supabase.from('categories').select('id, name, type').order('name', { ascending: true }),
+    supabase.from('holdings').select('id, name, account_id').order('name', { ascending: true }),
+    supabase
+      .from('recurring_allocations')
+      .select('rule_id, amount_cents, holdings(name)')
+      .order('amount_cents', { ascending: false }),
   ])
+
+  const accountName = new Map((accounts ?? []).map((a) => [a.id, a.name]))
+  const holdings = (holdingRows ?? []).map((h) => ({
+    id: h.id,
+    name: h.name,
+    accountId: h.account_id,
+    accountName: accountName.get(h.account_id) ?? '',
+  }))
+  const allocationsByRule = new Map<string, { name: string; cents: number }[]>()
+  for (const a of allocationRows ?? []) {
+    const list = allocationsByRule.get(a.rule_id) ?? []
+    list.push({ name: first(a.holdings)?.name ?? 'Activo', cents: a.amount_cents })
+    allocationsByRule.set(a.rule_id, list)
+  }
 
   const rows = (rules ?? []) as unknown as RuleRow[]
   const activeCount = rows.filter((r) => r.active).length
@@ -57,7 +82,13 @@ export default async function RecurringPage() {
       <PageHeader
         title="Recurrentes"
         description="Nóminas, alquileres, suscripciones o traspasos que se registran solos en su fecha."
-        actions={<NewRecurringDialog accounts={accounts ?? []} categories={categories ?? []} />}
+        actions={
+          <NewRecurringDialog
+            accounts={accounts ?? []}
+            categories={categories ?? []}
+            holdings={holdings}
+          />
+        }
       />
 
       {rows.length === 0 ? (
@@ -65,7 +96,13 @@ export default async function RecurringPage() {
           icon={RepeatIcon}
           title="Sin movimientos recurrentes"
           description="Crea una regla y cada vez que venza se añadirá el movimiento automáticamente."
-          action={<NewRecurringDialog accounts={accounts ?? []} categories={categories ?? []} />}
+          action={
+            <NewRecurringDialog
+              accounts={accounts ?? []}
+              categories={categories ?? []}
+              holdings={holdings}
+            />
+          }
         />
       ) : (
         <section aria-label="Reglas recurrentes">
@@ -80,6 +117,7 @@ export default async function RecurringPage() {
               const toAccount = first(rule.to_account)
               const category = first(rule.categories)
               const isTransfer = rule.to_account_id !== null
+              const allocations = allocationsByRule.get(rule.id) ?? []
               return (
                 <li
                   key={rule.id}
@@ -99,7 +137,11 @@ export default async function RecurringPage() {
                     <div className="min-w-0 flex-1">
                       <p className="flex items-center gap-2 truncate text-[0.9375rem] font-medium">
                         <span className="truncate">
-                          {isTransfer ? 'Traspaso' : (category?.name ?? 'Sin categoría')}
+                          {isTransfer
+                            ? allocations.length > 0
+                              ? 'Plan de aportación'
+                              : 'Traspaso'
+                            : (category?.name ?? 'Sin categoría')}
                         </span>
                         {!rule.active && (
                           <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[0.6875rem] font-medium text-muted-foreground">
@@ -114,9 +156,18 @@ export default async function RecurringPage() {
                           : account?.name}{' '}
                         · próxima el {formatShortDate(rule.next_run_date)}
                       </p>
+                      {allocations.length > 0 && (
+                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                          Reparto:{' '}
+                          {allocations.map((a) => `${a.name} ${formatCents(a.cents)}`).join(' · ')}
+                        </p>
+                      )}
                     </div>
                     {isTransfer ? (
-                      <Amount cents={rule.amount_cents} className="text-[0.9375rem] font-semibold" />
+                      <Amount
+                        cents={rule.amount_cents}
+                        className="text-[0.9375rem] font-semibold"
+                      />
                     ) : (
                       <Amount
                         // Las reglas guardan el importe en positivo; el signo sale del tipo.
