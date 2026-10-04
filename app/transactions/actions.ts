@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { transactionSchema } from '@/lib/validation/transaction-schemas'
-import { eurosToCents } from '@/lib/money'
+import { applyCategorySign, eurosToCents } from '@/lib/money'
 import { revalidatePath } from 'next/cache'
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>
@@ -38,12 +38,11 @@ async function parseTransaction(supabase: SupabaseServer, formData: FormData) {
     return { error: 'Cuenta no válida' } as const
   }
 
-  const cents = eurosToCents(parsed.data.amount)
   return {
     values: {
       account_id: parsed.data.accountId,
       category_id: parsed.data.categoryId,
-      amount_cents: category.type === 'income' ? cents : -cents,
+      amount_cents: applyCategorySign(eurosToCents(parsed.data.amount), category.type),
       description: parsed.data.description || null,
       transaction_date: parsed.data.transactionDate,
     },

@@ -23,7 +23,7 @@ export type BudgetProgress = {
 /** A partir del 80 % se avisa; por encima del 100 %, superado. */
 export const BUDGET_WARNING_RATIO = 0.8
 
-function statusFor(ratio: number): BudgetStatus {
+export function statusFor(ratio: number): BudgetStatus {
   if (ratio > 1) return 'over'
   if (ratio >= BUDGET_WARNING_RATIO) return 'warning'
   return 'ok'
@@ -53,15 +53,37 @@ export async function getBudgetProgress(now = new Date()): Promise<BudgetProgres
     supabase.from('categories').select('id, parent_id'),
   ])
 
-  if (!budgets || budgets.length === 0) return []
+  return computeBudgetProgress(budgets ?? [], transactions ?? [], categories ?? [])
+}
 
-  const parentOf = new Map((categories ?? []).map((c) => [c.id, c.parent_id]))
+type BudgetRow = {
+  id: string
+  category_id: string
+  amount_cents: number
+  categories: { name: string; icon: string | null }[] | { name: string; icon: string | null } | null
+}
+type TransactionRow = {
+  category_id: string | null
+  amount_cents: number
+  categories: { type: string }[] | { type: string } | null
+}
+type CategoryRow = { id: string; parent_id: string | null }
+
+/** Parte pura de getBudgetProgress (sin base de datos), para poder testearla. */
+export function computeBudgetProgress(
+  budgets: BudgetRow[],
+  transactions: TransactionRow[],
+  categories: CategoryRow[]
+): BudgetProgress[] {
+  if (budgets.length === 0) return []
+
+  const parentOf = new Map(categories.map((c) => [c.id, c.parent_id]))
 
   const spentByCategory = new Map<string, number>()
   const add = (categoryId: string, cents: number) =>
     spentByCategory.set(categoryId, (spentByCategory.get(categoryId) ?? 0) + cents)
 
-  for (const tx of transactions ?? []) {
+  for (const tx of transactions) {
     if (!tx.category_id || first(tx.categories)?.type !== 'expense') continue
     // Los gastos se guardan en negativo; el gasto real es el valor absoluto.
     const cents = Math.abs(tx.amount_cents)

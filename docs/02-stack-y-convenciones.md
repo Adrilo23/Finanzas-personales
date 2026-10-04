@@ -52,7 +52,7 @@ Detalle del esquema: [03-modelo-de-datos.md](03-modelo-de-datos.md).
 ## Manejo de dinero — regla no negociable
 
 - Todos los importes se guardan como enteros en céntimos (`bigint`): 10,50 € → 1050. ✅
-- Las conversiones y el formateo están **solo** en `lib/money.ts` (`eurosToCents`, `formatCents`, `parseEurosInput`). Nada de aritmética con `float` fuera de ahí. ✅
+- Las conversiones, el formateo y la regla de signo están **solo** en `lib/money.ts` (`eurosToCents`, `centsToEuros`, `formatCents`, `parseEurosInput`, `applyCategorySign`), con tests. Nada de aritmética con `float` fuera de ahí. ✅
 - La moneda se guarda por movimiento (`currency`) en previsión de multi-moneda, aunque hoy todo es EUR. ✅
 - El signo lo pone el servidor según el tipo de categoría; el usuario siempre introduce importes positivos. ✅
 
@@ -79,7 +79,7 @@ La carpeta `/types` del plan inicial no se ha creado: los tipos de la BD se gene
 - Componentes en PascalCase y hooks con prefijo `use`. ✅
 - Interfaz, comentarios y mensajes de commit en español. ✅
 - Commits con Conventional Commits (`feat:`, `fix:`, `chore:`…). ✅ (algunos commits antiguos no lo siguen)
-- Tests con Vitest para la lógica de negocio, sobre todo lo de dinero. ⏳ **Aún no hay tests ni test runner configurado.**
+- Tests con Vitest para la lógica de negocio, sobre todo lo de dinero. ✅ `npm test`; tests en `lib/*.test.ts` (dinero, signos, recurrentes, presupuestos, agregados). CI en GitHub Actions: lint + tipos + tests en cada push.
 - Las convenciones detalladas de arquitectura e interfaz están en `CLAUDE.md`.
 
 ## Hosting y despliegue

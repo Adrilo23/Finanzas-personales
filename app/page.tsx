@@ -13,6 +13,7 @@ import { getBudgetProgress } from '@/lib/budgets'
 import { NewAccountDialog } from '@/app/accounts/new-account-dialog'
 import { NewTransactionDialog } from '@/app/transactions/new-transaction-dialog'
 import { cn } from '@/lib/utils'
+import { percentChange, sumByType } from '@/lib/stats'
 
 type CategoryRef = { name: string; type: string; icon: string | null }
 
@@ -35,25 +36,6 @@ type RecentRow = {
 function first<T>(value: T[] | T | null): T | null {
   if (Array.isArray(value)) return value[0] ?? null
   return value
-}
-
-type Totals = { income: number; expense: number; investment: number }
-
-function sumByType(rows: MonthRow[]): Totals {
-  const totals: Totals = { income: 0, expense: 0, investment: 0 }
-  for (const row of rows) {
-    const category = first(row.categories)
-    if (!category) continue
-    if (category.type === 'income') totals.income += row.amount_cents
-    else if (category.type === 'expense') totals.expense += Math.abs(row.amount_cents)
-    else if (category.type === 'investment') totals.investment += Math.abs(row.amount_cents)
-  }
-  return totals
-}
-
-function percentChange(current: number, previous: number): number | null {
-  if (previous === 0) return null
-  return ((current - previous) / previous) * 100
 }
 
 export default async function DashboardPage() {

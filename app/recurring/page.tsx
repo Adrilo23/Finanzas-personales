@@ -3,6 +3,7 @@ import { RepeatIcon } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { FREQUENCY_LABELS } from '@/lib/validation/recurring-schemas'
 import { formatShortDate } from '@/lib/format'
+import { applyCategorySign } from '@/lib/money'
 import { PageHeader, PageShell } from '@/components/page-header'
 import { EmptyState } from '@/components/empty-state'
 import { Amount } from '@/components/amount'
@@ -102,11 +103,7 @@ export default async function RecurringPage() {
                     </div>
                     <Amount
                       // Las reglas guardan el importe en positivo; el signo sale del tipo.
-                      cents={
-                        category?.type === 'income'
-                          ? Math.abs(rule.amount_cents)
-                          : -Math.abs(rule.amount_cents)
-                      }
+                      cents={applyCategorySign(rule.amount_cents, category?.type)}
                       signed
                       className="text-[0.9375rem] font-semibold"
                     />

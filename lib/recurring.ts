@@ -1,17 +1,45 @@
 import { createClient } from '@/lib/supabase/server'
+import { applyCategorySign } from '@/lib/money'
 import { addWeeks, addMonths, addYears, format, parseISO } from 'date-fns'
 
-type Frequency = 'weekly' | 'monthly' | 'yearly'
+export type Frequency = 'weekly' | 'monthly' | 'yearly'
 
-function advance(date: Date, frequency: Frequency): Date {
+export function isSupportedFrequency(value: string): value is Frequency {
+  return value === 'weekly' || value === 'monthly' || value === 'yearly'
+}
+
+function addPeriods(date: Date, frequency: Frequency, n: number): Date {
   switch (frequency) {
     case 'weekly':
-      return addWeeks(date, 1)
+      return addWeeks(date, n)
     case 'monthly':
-      return addMonths(date, 1)
+      return addMonths(date, n)
     case 'yearly':
-      return addYears(date, 1)
+      return addYears(date, n)
   }
+}
+
+/**
+ * Fechas (yyyy-MM-dd) que han vencido desde `nextRunDate` hasta `today`, ambos incluidos,
+ * y la siguiente fecha pendiente. Cada fecha se calcula desde la inicial (inicio + n
+ * periodos) y no encadenando, para que un día 31 no derive a 28 tras pasar por febrero
+ * dentro de una misma generación.
+ */
+export function computeDueDates(
+  nextRunDate: string,
+  frequency: Frequency,
+  today: string
+): { dates: string[]; next: string } {
+  const start = parseISO(nextRunDate)
+  const dates: string[] = []
+  let n = 0
+  let cursor = format(start, 'yyyy-MM-dd')
+  while (cursor <= today) {
+    dates.push(cursor)
+    n += 1
+    cursor = format(addPeriods(start, frequency, n), 'yyyy-MM-dd')
+  }
+  return { dates, next: cursor }
 }
 
 type DueRule = {
@@ -50,21 +78,10 @@ export async function processRecurringRules(userId: string) {
   if (dueRules.length === 0) return
 
   for (const rule of dueRules) {
-    if (rule.frequency !== 'weekly' && rule.frequency !== 'monthly' && rule.frequency !== 'yearly') {
-      continue
-    }
+    if (!isSupportedFrequency(rule.frequency)) continue
 
-    const category = first(rule.categories)
-    const sign = category?.type === 'income' ? 1 : -1
-    const signedCents = sign * Math.abs(rule.amount_cents)
-
-    let cursor = parseISO(rule.next_run_date)
-    const datesToInsert: string[] = []
-
-    while (format(cursor, 'yyyy-MM-dd') <= today) {
-      datesToInsert.push(format(cursor, 'yyyy-MM-dd'))
-      cursor = advance(cursor, rule.frequency)
-    }
+    const signedCents = applyCategorySign(rule.amount_cents, first(rule.categories)?.type)
+    const { dates: datesToInsert, next } = computeDueDates(rule.next_run_date, rule.frequency, today)
 
     if (datesToInsert.length === 0) continue
 
@@ -83,7 +100,7 @@ export async function processRecurringRules(userId: string) {
 
     await supabase
       .from('recurring_rules')
-      .update({ next_run_date: format(cursor, 'yyyy-MM-dd') })
+      .update({ next_run_date: next })
       .eq('id', rule.id)
   }
 }

@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Lint
+        run: npx eslint app components lib
+      - name: Tipos
+        # next-env.d.ts y los tipos de rutas no están en el repo: se generan sin hacer build.
+        run: npx next typegen && npx tsc --noEmit
+      - name: Tests
+        run: npm test

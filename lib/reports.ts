@@ -1,8 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
+import { centsToEuros } from '@/lib/money'
 import { format, startOfMonth, subMonths } from 'date-fns'
 import { es } from 'date-fns/locale'
 
-type Row = {
+export type Row = {
   amount_cents: number
   transaction_date: string
   categories: { type: string }[] | { type: string } | null
@@ -36,11 +37,17 @@ export async function getMonthlyEvolution(): Promise<MonthlyPoint[]> {
     .is('deleted_at', null)
     .gte('transaction_date', from)
 
-  const rows = (data ?? []) as Row[]
+  return aggregateMonthly((data ?? []) as Row[], new Date())
+}
 
+/**
+ * Parte pura de getMonthlyEvolution (sin base de datos), para poder testearla.
+ * Agrupa por mes los últimos 12 meses respecto a `now` y devuelve totales en euros.
+ */
+export function aggregateMonthly(rows: Row[], now: Date): MonthlyPoint[] {
   const months: Record<string, MonthlyPoint> = {}
   for (let i = 11; i >= 0; i--) {
-    const d = startOfMonth(subMonths(new Date(), i))
+    const d = startOfMonth(subMonths(now, i))
     const key = format(d, 'yyyy-MM')
     months[key] = {
       month: format(d, 'MMM yy', { locale: es }),
@@ -63,11 +70,12 @@ export async function getMonthlyEvolution(): Promise<MonthlyPoint[]> {
     point.balance += row.amount_cents
   }
 
+  // Se suma en céntimos (enteros) y solo al final se pasa a euros para la gráfica.
   return Object.values(months).map((p) => ({
     ...p,
-    ingresos: p.ingresos / 100,
-    gastos: p.gastos / 100,
-    inversion: p.inversion / 100,
-    balance: p.balance / 100,
+    ingresos: centsToEuros(p.ingresos),
+    gastos: centsToEuros(p.gastos),
+    inversion: centsToEuros(p.inversion),
+    balance: centsToEuros(p.balance),
   }))
 }

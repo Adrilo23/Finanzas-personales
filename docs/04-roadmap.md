@@ -4,7 +4,7 @@
 >
 > **Fuente de verdad:** este archivo del repo (GitHub `Adrilo23/Finanzas-personales`). Claude Code lo actualiza al terminar cada tarea, en el mismo commit que el código.
 
-## Estado actual: 🟢 Fase 1 y Fase 3 completas en lo esencial → siguiente: transferencias entre cuentas y valoración de inversiones (Fase 3b), y tests
+## Estado actual: 🟢 Fase 1 y Fase 3 completas, con tests y CI → siguiente: transferencias entre cuentas y valoración de inversiones (Fase 3b)
 
 Última actualización: 2026-10-04
 
@@ -30,6 +30,11 @@ Objetivo: poder llevar mis propias cuentas reales, aunque sea con UI básica.
 - [x] Listado de movimientos con filtro por fecha/categoría/cuenta
 - [x] Cálculo de saldo por cuenta — vista `account_balances` (migración 0002)
 - [x] Dashboard básico: total ingresos, total gastos, balance del mes
+
+## Calidad
+- [x] Tests con Vitest de la lógica de dinero y cálculos (`lib/*.test.ts`) y CI en GitHub Actions (lint, tipos, tests)
+- [x] Corregido al escribir los tests: `parseEurosInput` leía "1.234,56" como 1,23 €; ahora entiende el formato español con miles
+- [ ] Recurrentes mensuales en día 29-31: al pasar por un mes más corto la fecha guardada baja (31 → 28) y se queda ahí en los meses siguientes. Dentro de una misma generación ya no deriva; arreglarlo del todo requiere guardar el día original de la regla (columna nueva)
 
 ## Fase 2 — PWA y multiplataforma
 - [x] Configurar manifest y service worker (instalable en móvil) — Serwist (`app/sw.ts`, `app/manifest.ts`)

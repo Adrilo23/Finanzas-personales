@@ -22,13 +22,17 @@ npm run dev     # servidor de desarrollo
 npm run build   # build de producción (también compila el service worker)
 npm run lint    # ESLint (eslint-config-next)
 npx tsc --noEmit  # comprobación de tipos
+npm test          # tests (Vitest), una pasada
+npm run test:watch  # tests en modo vigilancia
 npm run db:types  # regenera lib/supabase/database.types.ts desde la BD remota
 
 npx supabase migration list  # estado local vs remoto de las migraciones
 npx supabase db push         # aplica migraciones pendientes al proyecto remoto
 ```
 
-No hay tests ni test runner configurados. Para comprobar cambios de UI en un navegador real está el MCP de Playwright (`.mcp.json`): arranca `npm run dev` y navega a `http://localhost:3000`. Inicia sesión con un usuario de pruebas, nunca con la cuenta real.
+Los tests (Vitest, entorno node, `TZ=Europe/Madrid`) cubren la lógica pura de `lib/` y viven junto al código (`lib/*.test.ts`). Para que algo sea testeable, separa el cálculo de la consulta a Supabase: `getX()` consulta y delega en una función pura `computeX()` (ver `lib/budgets.ts`, `lib/reports.ts`, `lib/recurring.ts`, `lib/stats.ts`). Todo cambio en dinero, signos, fechas o agregados debe venir con su test. GitHub Actions (`.github/workflows/ci.yml`) pasa lint, tipos y tests en cada push a `main`.
+
+Para comprobar cambios de UI en un navegador real está el MCP de Playwright (`.mcp.json`): arranca `npm run dev` y navega a `http://localhost:3000`. Inicia sesión con un usuario de pruebas, nunca con la cuenta real.
 
 Variables de entorno (en `.env.local`): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 
@@ -46,8 +50,8 @@ Cada sección (`app/accounts`, `app/categories`, `app/transactions`, `app/recurr
 - `new-*-dialog.tsx`: diálogo cliente con react-hook-form + `zodResolver` usando el mismo esquema, que convierte los datos a `FormData` y llama a la action.
 
 ### Modelo de dinero (importante)
-- Los importes se guardan como `bigint` en céntimos (`amount_cents`, `initial_balance_cents`). Las conversiones euros/céntimos se hacen **solo** en `lib/money.ts` (`eurosToCents`, `formatCents`).
-- **El signo lo pone el servidor a partir del tipo de categoría**: `income` es positivo; `expense` e `investment` son negativos. El usuario siempre introduce importes positivos.
+- Los importes se guardan como `bigint` en céntimos (`amount_cents`, `initial_balance_cents`). Las conversiones euros/céntimos se hacen **solo** en `lib/money.ts` (`eurosToCents`, `centsToEuros`, `formatCents`, `parseEurosInput`).
+- **El signo lo pone el servidor a partir del tipo de categoría** con `applyCategorySign` (`lib/money.ts`): `income` es positivo; `expense`, `investment` o sin categoría, negativos. El usuario siempre introduce importes positivos.
 - `transactions` usa soft delete (`deleted_at`). Toda consulta de movimientos debe filtrar con `.is('deleted_at', null)`.
 - El saldo de cada cuenta sale de la vista `account_balances` (migración 0002, `security_invoker`), no se calcula en el cliente.
 
