@@ -4,7 +4,7 @@
 >
 > **Fuente de verdad:** este archivo del repo (GitHub `Adrilo23/Finanzas-personales`). Claude Code lo actualiza al terminar cada tarea, en el mismo commit que el código.
 
-## Estado actual: 🟢 Fase 1 y Fase 3 completas, con tests y CI → siguiente: transferencias entre cuentas y valoración de inversiones (Fase 3b)
+## Estado actual: 🟢 Fase 1 y Fase 3 completas, con tests y CI → siguiente: cuentas de inversión con fondos (Fase 3b, tanda 1)
 
 Última actualización: 2026-10-04
 
@@ -49,18 +49,23 @@ Objetivo: poder llevar mis propias cuentas reales, aunque sea con UI básica.
 - [x] Exportación a Excel/PDF — `app/transactions/export/route.ts`
 - [x] Presupuestos por categoría con alertas — migración `0005`, `/budgets` y bloque en el inicio. Límite mensual por categoría de gasto, las subcategorías suman al padre, y los avisos son visuales (80 % «cerca del límite», >100 % «superado»), sin notificaciones externas. Partió de la propuesta del Project de claude.ai, adaptada al diseño y con correcciones (fechas en hora local, validación de la categoría en el servidor)
 
-## Fase 3b — Transferencias e inversiones (añadida 2026-10-04)
-Idea surgida al usar la app: una aportación a un fondo no es un gasto, es dinero que pasa de una cuenta a otra; y las cuentas de inversión cambian de valor solas.
-- [ ] Transferencias entre cuentas (origen → destino): dos movimientos enlazados, sin categoría; mueven saldos pero no cuentan como ingreso, gasto ni presupuesto. Admitir transferencias recurrentes (aportación mensual)
-- [ ] Revisar el papel de la categoría `investment`: propuesta → "invertido" = lo transferido a cuentas de tipo inversión, y migrar las aportaciones existentes a transferencias
-- [ ] Cuentas de inversión con posiciones: tipo de cuenta `investment`; por cada fondo, ISIN y participaciones (calculadas al aportar: importe ÷ valor liquidativo; ajustables a mano)
-- [ ] Valoración manual: introducir el valor cuando se quiera; mostrar valor de mercado, aportado y plusvalía (€ y %), y avisar si lleva más de un mes sin actualizar
-- [ ] Actualización diaria automática de precios: tabla de precios compartida (ISIN, fecha, valor liquidativo) rellenada por una tarea programada (Vercel Cron o Supabase pg_cron + Edge Function). Fuente detrás de una interfaz `PriceProvider` intercambiable
-  - Uso personal/amigos: fuente gratuita (p. ej. API no oficial de Yahoo), asumiendo que puede fallar
-  - **Antes de vender: proveedor de datos con licencia comercial** (redistribuir precios a clientes lo exige)
-  - Excepción a "todo con anon key + RLS": la tarea usa la service role key solo en servidor; la tabla de precios no tiene datos personales y los usuarios solo la leen
+## Fase 3b — Inversiones y transferencias (añadida 2026-10-04)
+Idea surgida al usar la app: una cuenta como MyInvestor contiene fondos cuyo valor cambia solo, y una aportación no es un gasto sino dinero que cambia de sitio.
+
+**Orden acordado:** primero cuentas de inversión con sus fondos (lo que hace falta ya para MyInvestor); después la actualización diaria programada; después las transferencias.
+
+- [ ] **Tanda 1 — Cuentas de inversión con fondos**
+  - Tipo de cuenta `investment`
+  - Fondos por cuenta (`holdings`): ISIN, nombre y código de Yahoo, resueltos al introducir el ISIN
+  - Operaciones por fondo (`holding_operations`): compra/venta, fecha, participaciones (`numeric`, con decimales) e importe en céntimos. Participaciones introducidas desde el bróker (dato exacto); cálculo importe ÷ valor liquidativo como alternativa
+  - Precios compartidos (`fund_prices`: ISIN, fecha, valor liquidativo), refrescados al abrir la cuenta si tienen más de un día
+  - Valor = Σ participaciones × último valor liquidativo, calculado en SQL con `numeric` y redondeado a céntimos. Pantalla de detalle de la cuenta con valor, aportado y plusvalía (€ y %) por fondo y en total; el valor cuenta en el saldo total del inicio
+- [ ] **Tanda 2 — Actualización diaria programada** (Vercel Cron o Supabase pg_cron + Edge Function), con la fuente detrás de una interfaz `PriceProvider` intercambiable
+  - Requiere `SUPABASE_SERVICE_ROLE_KEY` y una clave de cron en Vercel, solo en servidor. Es la única excepción a "todo con anon key + RLS": la tabla de precios no tiene datos personales y los usuarios solo la leen
+  - Uso personal/amigos: fuente gratuita (API no oficial de Yahoo). **Antes de vender: proveedor de datos con licencia comercial**
   - Cobertura comprobada en Yahoo (2026-10-04), los tres en EUR y con valor liquidativo diario (desfase normal de 1 día hábil): Fidelity MSCI World Index P-Acc (`IE00BYX5NX33` → `0P0001CLDK.F`), Amundi IS Core MSCI Emerging Markets IE-C (`LU0996175948` → `0P00011MU2.F`) y Groupama Trésorerie IC (`FR0000989626` → `0P00000LRT.F`)
-  - Participaciones con decimales (`numeric`, no `bigint`): un fondo como Groupama Trésorerie vale ~44.600 € por participación. El valor (participaciones × precio) se calcula en SQL con `numeric` y se redondea a céntimos, nunca con float en JS
+- [ ] **Tanda 3 — Transferencias entre cuentas** (origen → destino): dos movimientos enlazados, sin categoría; mueven saldos pero no cuentan como ingreso, gasto ni presupuesto. Admiten recurrencia (aportación mensual). Una aportación quedaría como transferencia banco → cuenta de inversión + compra del fondo
+- [ ] Revisar la categoría `investment` cuando existan las transferencias: hasta entonces, lo registrado como gasto de inversión se deja como está
 
 ## Fase 4 — Pulido y preparación para portfolio/LinkedIn
 - [x] Diseño UI cuidado (no solo funcional) — rediseño completo: sistema de tokens (modo claro/oscuro), navegación con barra inferior en móvil, formularios nuevos, estados vacíos y de carga, gráfica accesible
