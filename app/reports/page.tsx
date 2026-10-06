@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { getMonthlyEvolution } from '@/lib/reports'
-import { ChartColumnIcon } from 'lucide-react'
+import Link from 'next/link'
+import { ChartColumnIcon, FileTextIcon } from 'lucide-react'
+import { buttonVariants } from '@/components/ui/button'
 import { PageHeader, PageShell } from '@/components/page-header'
 import { EmptyState } from '@/components/empty-state'
 import { cn } from '@/lib/utils'
@@ -42,7 +44,16 @@ export default async function ReportsPage() {
 
   return (
     <PageShell>
-      <PageHeader title="Evolución" description="Los últimos 12 meses, incluido el actual." />
+      <PageHeader
+        title="Evolución"
+        description="Los últimos 12 meses, incluido el actual."
+        actions={
+          <Link href="/reports/monthly" className={buttonVariants({ variant: 'outline' })}>
+            <FileTextIcon data-icon="inline-start" />
+            Informe mensual
+          </Link>
+        }
+      />
 
       {activeMonths === 0 ? (
         <EmptyState
