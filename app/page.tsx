@@ -12,6 +12,8 @@ import { isHiddenTransferLeg } from '@/lib/transfers'
 import { BudgetBar, BudgetStatusBadge } from '@/components/budget-progress'
 import { getBudgetProgress } from '@/lib/budgets'
 import { getGoals } from '@/lib/goals'
+import { computeFirstSteps } from '@/lib/onboarding'
+import { FirstSteps } from './first-steps'
 import { GoalStatusBadge, goalBarStatus } from '@/components/goal-status'
 import { NewAccountDialog } from '@/app/accounts/new-account-dialog'
 import { NewTransactionDialog } from '@/app/transactions/new-transaction-dialog'
@@ -66,6 +68,8 @@ export default async function DashboardPage() {
     budgets,
     { data: pendingOps },
     goals,
+    { count: transactionCount },
+    { count: recurringCount },
   ] = await Promise.all([
     supabase
       .from('transactions')
@@ -90,6 +94,8 @@ export default async function DashboardPage() {
     getBudgetProgress(now),
     supabase.from('holding_operations').select('id, holdings(account_id)').eq('status', 'pending'),
     getGoals(now),
+    supabase.from('transactions').select('id', { count: 'exact', head: true }).is('deleted_at', null),
+    supabase.from('recurring_rules').select('id', { count: 'exact', head: true }),
   ])
 
   const rows = (monthData ?? []) as MonthRow[]
@@ -153,6 +159,14 @@ export default async function DashboardPage() {
     .filter((g) => g.status !== 'completed')
     .sort((a, b) => goalOrder[a.status] - goalOrder[b.status] || b.ratio - a.ratio)
     .slice(0, 4)
+
+  const firstSteps = computeFirstSteps({
+    accounts: accounts.length,
+    transactions: transactionCount ?? 0,
+    budgets: budgets.length,
+    recurring: recurringCount ?? 0,
+    goals: goals.length,
+  })
 
   // Compras de planes de aportación pendientes de confirmar con el bróker.
   const pendingCount = pendingOps?.length ?? 0
@@ -262,6 +276,8 @@ export default async function DashboardPage() {
           </span>
         </Link>
       )}
+
+      <FirstSteps steps={firstSteps} />
 
       <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
         {/* Balance del mes */}

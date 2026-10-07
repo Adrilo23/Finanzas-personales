@@ -4,7 +4,7 @@
 >
 > **Fuente de verdad:** este archivo del repo (GitHub `Adrilo23/Finanzas-personales`). Claude Code lo actualiza al terminar cada tarea, en el mismo commit que el código.
 
-## Estado actual: 🟢 Fase 1 y Fase 3 completas, con tests y CI → Fase 3b completa salvo la actualización diaria programada; objetivos de ahorro e informe mensual en PDF hechos (migración `0012` aplicada el 2026-10-07 desde el SQL Editor: falta `npx supabase migration repair --status applied 0012` para que el historial coincida); siguiente: ayuda para nuevos usuarios (Fase 4) o actualización programada de precios
+## Estado actual: 🟢 Fase 1 y Fase 3 completas, con tests y CI → Fase 3b completa salvo la actualización diaria programada; objetivos de ahorro e informe mensual en PDF hechos (migración `0012` aplicada el 2026-10-07 desde el SQL Editor: falta `npx supabase migration repair --status applied 0012` para que el historial coincida); siguiente: página de ayuda para nuevos usuarios (Fase 4; la lista de primeros pasos ya está) o actualización programada de precios
 
 Última actualización: 2026-10-07
 
@@ -86,7 +86,7 @@ Idea surgida al usar la app: una cuenta como MyInvestor contiene fondos cuyo val
 ## Fase 4 — Pulido y preparación para portfolio/LinkedIn
 - [x] Diseño UI cuidado (no solo funcional) — rediseño completo: sistema de tokens (modo claro/oscuro), navegación con barra inferior en móvil, formularios nuevos, estados vacíos y de carga, gráfica accesible
 - [ ] Ayuda para nuevos usuarios (prioritaria: la usarán familia y amigos y el objetivo es venderla)
-  - [ ] Lista de primeros pasos en el inicio que se marca sola según el uso (cuenta, movimiento, presupuesto, recurrente, instalar en el móvil)
+  - [x] Lista de primeros pasos en el inicio que se marca sola según el uso (cuenta, movimiento, presupuesto, recurrente, objetivo); se puede ocultar (queda en el navegador) y desaparece al completarla. **Falta el paso «instalar en el móvil»**, que irá con la página de ayuda y la guía de iPhone
   - [ ] Página de ayuda en la app (6-8 preguntas reales) + guía de instalación específica para iPhone (Safari no ofrece instalar la PWA)
   - [ ] Ayudas contextuales "?" solo en los puntos confusos: importe en positivo, gasto/inversión/transferencia, recurrentes generados al abrir la app, subcategorías que suman al padre
   - [ ] Modo demo con datos de ejemplo ("Probar sin registrarme"), junto con la landing
