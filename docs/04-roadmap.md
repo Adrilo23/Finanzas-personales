@@ -4,9 +4,9 @@
 >
 > **Fuente de verdad:** este archivo del repo (GitHub `Adrilo23/Finanzas-personales`). Claude Code lo actualiza al terminar cada tarea, en el mismo commit que el código.
 
-## Estado actual: 🟢 Fase 1 y Fase 3 completas, con tests y CI → Fase 3b completa salvo la actualización diaria programada; objetivos de ahorro e informe mensual en PDF hechos (pendiente aplicar la migración `0012`); siguiente: ayuda para nuevos usuarios (Fase 4) o actualización programada de precios
+## Estado actual: 🟢 Fase 1 y Fase 3 completas, con tests y CI → Fase 3b completa salvo la actualización diaria programada; objetivos de ahorro e informe mensual en PDF hechos (migración `0012` aplicada el 2026-10-07 desde el SQL Editor: falta `npx supabase migration repair --status applied 0012` para que el historial coincida); siguiente: ayuda para nuevos usuarios (Fase 4) o actualización programada de precios
 
-Última actualización: 2026-10-06
+Última actualización: 2026-10-07
 
 Leyenda: `[x]` hecho · `[~]` hecho en parte (ver nota) · `[ ]` pendiente
 
@@ -78,7 +78,7 @@ Idea surgida al usar la app: una cuenta como MyInvestor contiene fondos cuyo val
 ## Fase 3c — Objetivos e informes (añadida 2026-10-06)
 - [x] **Objetivos de ahorro** (migración `0012`, `/goals`): nombre, icono, cantidad y fecha opcional. El progreso sale de **aportaciones manuales** (y retiradas) que registra el usuario; no son movimientos, así que no tocan saldos, informes ni presupuestos. Muestra ahorrado/objetivo, lo que falta, cuánto aportar al mes para llegar a la fecha, el ritmo real (media de los últimos 90 días), la fecha estimada y un estado (cumplido · vas a tiempo · con retraso · fecha superada). Lógica pura y testeada en `lib/goals.ts`
   - Decisión: aportaciones manuales y no vinculadas a una cuenta, para no contar dos veces el dinero ni acoplarlo al saldo. **Posible mejora:** vincular un objetivo a una cuenta de ahorro y leer el progreso de su saldo, o generar la aportación desde un traspaso
-  - Pendiente: bloque resumen de objetivos en el inicio
+  - Resumen de objetivos en el inicio (los que van con retraso, primero)
 - [x] **Informe mensual** (`/reports/monthly?month=yyyy-MM`, enlazado desde Evolución): totales y balance del mes con tasa de ahorro y comparación con el mes anterior, gasto por categoría, mayores gastos, estado de presupuestos y aportaciones a objetivos. Se descarga como **PDF** (`/reports/monthly/export`, `lib/monthly-report-pdf.ts`). Cálculo puro y testeado en `lib/monthly-report.ts`
   - Los presupuestos no guardan histórico: un mes pasado se compara con los límites actuales
   - Pendiente: envío por email y comparación anual

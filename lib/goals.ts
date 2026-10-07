@@ -1,3 +1,4 @@
+import { createClient } from '@/lib/supabase/server'
 import { addMonths, differenceInCalendarMonths, parseISO, startOfDay, subDays } from 'date-fns'
 
 export type GoalStatus = 'completed' | 'on_track' | 'behind' | 'overdue' | 'no_deadline'
@@ -109,4 +110,17 @@ export function computeGoals(
   now: Date
 ): GoalProgress[] {
   return goals.map((g) => computeGoalProgress(g, contributions, now))
+}
+
+/** Objetivos del usuario con su progreso (consulta y delega en computeGoals). */
+export async function getGoals(now = new Date()): Promise<GoalProgress[]> {
+  const supabase = await createClient()
+  const [{ data: goals }, { data: contributions }] = await Promise.all([
+    supabase
+      .from('savings_goals')
+      .select('id, name, icon, target_cents, target_date')
+      .order('created_at', { ascending: true }),
+    supabase.from('goal_contributions').select('goal_id, amount_cents, contribution_date'),
+  ])
+  return computeGoals(goals ?? [], contributions ?? [], now)
 }

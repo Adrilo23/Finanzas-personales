@@ -11,6 +11,8 @@ import { CategoryBadge, TransferBadge } from '@/components/category-type'
 import { isHiddenTransferLeg } from '@/lib/transfers'
 import { BudgetBar, BudgetStatusBadge } from '@/components/budget-progress'
 import { getBudgetProgress } from '@/lib/budgets'
+import { getGoals } from '@/lib/goals'
+import { GoalStatusBadge, goalBarStatus } from '@/components/goal-status'
 import { NewAccountDialog } from '@/app/accounts/new-account-dialog'
 import { NewTransactionDialog } from '@/app/transactions/new-transaction-dialog'
 import { cn } from '@/lib/utils'
@@ -63,6 +65,7 @@ export default async function DashboardPage() {
     { data: categories },
     budgets,
     { data: pendingOps },
+    goals,
   ] = await Promise.all([
     supabase
       .from('transactions')
@@ -86,6 +89,7 @@ export default async function DashboardPage() {
     supabase.from('categories').select('id, name, type').order('name', { ascending: true }),
     getBudgetProgress(now),
     supabase.from('holding_operations').select('id, holdings(account_id)').eq('status', 'pending'),
+    getGoals(now),
   ])
 
   const rows = (monthData ?? []) as MonthRow[]
@@ -142,6 +146,13 @@ export default async function DashboardPage() {
     .sort((a, b) => budgetOrder[a.status] - budgetOrder[b.status] || b.ratio - a.ratio)
     .slice(0, 4)
   const budgetAlerts = budgets.filter((b) => b.status !== 'ok').length
+
+  // Objetivos en marcha: los que van con retraso primero, luego por progreso.
+  const goalOrder = { overdue: 0, behind: 1, on_track: 2, no_deadline: 3, completed: 4 } as const
+  const goalHighlights = goals
+    .filter((g) => g.status !== 'completed')
+    .sort((a, b) => goalOrder[a.status] - goalOrder[b.status] || b.ratio - a.ratio)
+    .slice(0, 4)
 
   // Compras de planes de aportación pendientes de confirmar con el bróker.
   const pendingCount = pendingOps?.length ?? 0
@@ -417,6 +428,46 @@ export default async function DashboardPage() {
                   </span>
                 </div>
                 <BudgetBar ratio={b.ratio} status={b.status} className="h-1.5" />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {goalHighlights.length > 0 && (
+        <section aria-labelledby="objetivos-resumen" className="surface p-5 sm:p-6">
+          <div className="mb-4 flex items-baseline justify-between gap-3">
+            <h2 id="objetivos-resumen" className="text-[0.9375rem] font-semibold">
+              Objetivos de ahorro
+            </h2>
+            <Link
+              href="/goals"
+              className="group flex shrink-0 items-center gap-1 rounded text-[0.8125rem] font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/40"
+            >
+              Ver todos
+              <ArrowRightIcon
+                aria-hidden
+                className="size-3.5 transition-transform duration-150 group-hover:translate-x-0.5"
+              />
+            </Link>
+          </div>
+          <ul className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
+            {goalHighlights.map((g) => (
+              <li key={g.id}>
+                <div className="mb-1.5 flex items-center justify-between gap-3 text-sm">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate">
+                      {g.icon ? `${g.icon} ` : ''}
+                      {g.name}
+                    </span>
+                    <GoalStatusBadge status={g.status} />
+                  </span>
+                  <span className="shrink-0 text-muted-foreground">
+                    <Amount cents={g.savedCents} className="font-medium text-foreground" /> /{' '}
+                    <Amount cents={g.targetCents} />
+                  </span>
+                </div>
+                <BudgetBar ratio={g.ratio} status={goalBarStatus(g.status)} className="h-1.5" />
               </li>
             ))}
           </ul>
