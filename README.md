@@ -30,6 +30,8 @@
 | 🪙 **Planes de aportación** | Un traspaso recurrente que reparte el dinero entre activos y crea compras pendientes que confirmas con las participaciones reales del bróker. |
 | 💰 **Cuentas remuneradas** | Interés anual opcional por cuenta, abonado cada mes sobre el saldo medio diario. |
 | 🎯 **Presupuestos** | Límite mensual por categoría con avisos visuales («cerca del límite» al 80 %, «superado» por encima del 100 %). |
+| 🏁 **Objetivos de ahorro** | Metas con cantidad y fecha opcional; aportaciones manuales, cuota mensual necesaria, ritmo real y fecha estimada. |
+| 📄 **Informe mensual** | Resumen del mes (balance, tasa de ahorro, categorías, presupuestos, objetivos) descargable en PDF. |
 | 📊 **Informes** | Evolución mensual de los últimos 12 meses con gráfica accesible y apta para daltonismo. |
 | 📤 **Exportación** | Descarga de movimientos a Excel (XLSX) o PDF con los mismos filtros de la lista. |
 | 📱 **PWA** | Instalable en el móvil, con modo claro/oscuro, navegación inferior en móvil y lectura sin conexión de las páginas visitadas. |

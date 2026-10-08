@@ -182,6 +182,44 @@ export type Database = {
           },
         ]
       }
+      goal_contributions: {
+        Row: {
+          amount_cents: number
+          contribution_date: string
+          created_at: string
+          goal_id: string
+          id: string
+          note: string | null
+          user_id: string
+        }
+        Insert: {
+          amount_cents: number
+          contribution_date?: string
+          created_at?: string
+          goal_id: string
+          id?: string
+          note?: string | null
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number
+          contribution_date?: string
+          created_at?: string
+          goal_id?: string
+          id?: string
+          note?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goal_contributions_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "savings_goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       holding_operations: {
         Row: {
           affects_cash: boolean
@@ -426,6 +464,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      savings_goals: {
+        Row: {
+          created_at: string
+          icon: string | null
+          id: string
+          name: string
+          target_cents: number
+          target_date: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name: string
+          target_cents: number
+          target_date?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name?: string
+          target_cents?: number
+          target_date?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       transactions: {
         Row: {

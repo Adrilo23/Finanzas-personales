@@ -4,9 +4,9 @@
 >
 > **Fuente de verdad:** este archivo del repo (GitHub `Adrilo23/Finanzas-personales`). Claude Code lo actualiza al terminar cada tarea, en el mismo commit que el código.
 
-## Estado actual: 🟢 Fase 1 y Fase 3 completas, con tests y CI → Fase 3b completa salvo la actualización diaria programada; siguiente: ayuda para nuevos usuarios (Fase 4) o actualización programada de precios
+## Estado actual: 🟢 Fase 1 y Fase 3 completas, con tests y CI → Fase 3b completa salvo la actualización diaria programada; objetivos de ahorro e informe mensual en PDF hechos (migración `0012` aplicada el 2026-10-07 desde el SQL Editor: falta `npx supabase migration repair --status applied 0012` para que el historial coincida); siguiente: página de ayuda para nuevos usuarios (Fase 4; la lista de primeros pasos ya está) o actualización programada de precios
 
-Última actualización: 2026-10-04
+Última actualización: 2026-10-07
 
 Leyenda: `[x]` hecho · `[~]` hecho en parte (ver nota) · `[ ]` pendiente
 
@@ -75,10 +75,18 @@ Idea surgida al usar la app: una cuenta como MyInvestor contiene fondos cuyo val
 - [x] **Cuentas remuneradas** (migración `0011`): campo opcional «Interés anual» en cualquier cuenta. Cada día 1 se abona como ingreso (categoría «Intereses») el interés del mes anterior sobre el saldo medio diario de efectivo (% ÷ 12). Si la app lleva meses sin abrirse, abona cada mes con interés compuesto. Se usa el % que pone el usuario (bruto o neto); el abono generado se puede editar si el banco paga otra cifra
 - [ ] Revisar la categoría `investment` cuando existan las transferencias: hasta entonces, lo registrado como gasto de inversión se deja como está
 
+## Fase 3c — Objetivos e informes (añadida 2026-10-06)
+- [x] **Objetivos de ahorro** (migración `0012`, `/goals`): nombre, icono, cantidad y fecha opcional. El progreso sale de **aportaciones manuales** (y retiradas) que registra el usuario; no son movimientos, así que no tocan saldos, informes ni presupuestos. Muestra ahorrado/objetivo, lo que falta, cuánto aportar al mes para llegar a la fecha, el ritmo real (media de los últimos 90 días), la fecha estimada y un estado (cumplido · vas a tiempo · con retraso · fecha superada). Lógica pura y testeada en `lib/goals.ts`
+  - Decisión: aportaciones manuales y no vinculadas a una cuenta, para no contar dos veces el dinero ni acoplarlo al saldo. **Posible mejora:** vincular un objetivo a una cuenta de ahorro y leer el progreso de su saldo, o generar la aportación desde un traspaso
+  - Resumen de objetivos en el inicio (los que van con retraso, primero)
+- [x] **Informe mensual** (`/reports/monthly?month=yyyy-MM`, enlazado desde Evolución): totales y balance del mes con tasa de ahorro y comparación con el mes anterior, gasto por categoría, mayores gastos, estado de presupuestos y aportaciones a objetivos. Se descarga como **PDF** (`/reports/monthly/export`, `lib/monthly-report-pdf.ts`). Cálculo puro y testeado en `lib/monthly-report.ts`
+  - Los presupuestos no guardan histórico: un mes pasado se compara con los límites actuales
+  - Pendiente: envío por email y comparación anual
+
 ## Fase 4 — Pulido y preparación para portfolio/LinkedIn
 - [x] Diseño UI cuidado (no solo funcional) — rediseño completo: sistema de tokens (modo claro/oscuro), navegación con barra inferior en móvil, formularios nuevos, estados vacíos y de carga, gráfica accesible
 - [ ] Ayuda para nuevos usuarios (prioritaria: la usarán familia y amigos y el objetivo es venderla)
-  - [ ] Lista de primeros pasos en el inicio que se marca sola según el uso (cuenta, movimiento, presupuesto, recurrente, instalar en el móvil)
+  - [x] Lista de primeros pasos en el inicio que se marca sola según el uso (cuenta, movimiento, presupuesto, recurrente, objetivo); se puede ocultar (queda en el navegador) y desaparece al completarla. **Falta el paso «instalar en el móvil»**, que irá con la página de ayuda y la guía de iPhone
   - [ ] Página de ayuda en la app (6-8 preguntas reales) + guía de instalación específica para iPhone (Safari no ofrece instalar la PWA)
   - [ ] Ayudas contextuales "?" solo en los puntos confusos: importe en positivo, gasto/inversión/transferencia, recurrentes generados al abrir la app, subcategorías que suman al padre
   - [ ] Modo demo con datos de ejemplo ("Probar sin registrarme"), junto con la landing
@@ -98,6 +106,8 @@ Idea surgida al usar la app: una cuenta como MyInvestor contiene fondos cuyo val
 - **¿Editar/borrar transacciones directamente o solo con movimientos de ajuste?** — Edición directa y borrado lógico (`deleted_at`). `updated_at` registra cuándo se modificó; si se pasa a SaaS se puede añadir auditoría de cambios.
 - **¿Multi-moneda desde el MVP?** — Pospuesto. Las columnas `currency` existen, pero la UI trabaja en EUR y los totales suman sin convertir.
 - **¿Categorías por defecto fijas o editables?** — Editables: se precargan por usuario y se pueden renombrar, borrar o ampliar. El tipo de una categoría no se puede cambiar una vez creada.
+
+- **¿Registrar pagos leyendo las notificaciones del banco?** — Descartado. Una PWA no puede leer las notificaciones de otras apps (ni en Android ni en iOS); solo lo permite una app nativa de Android con permiso de acceso a notificaciones, y en iOS no existe. No se incluye. Alternativas realistas si se retoma: importar el extracto CSV/Excel del banco, o conectar con Open Banking (PSD2) mediante un agregador de pago.
 
 ## Cómo usar este documento con Claude
 - **Claude Code:** al completar una tarea, marca su casilla aquí (con una nota breve si queda algo pendiente), actualiza "Estado actual" y la fecha, e incluye el cambio en el mismo commit que el código.

@@ -14,6 +14,7 @@ import {
   PiggyBankIcon,
   RepeatIcon,
   TagIcon,
+  TargetIcon,
   WalletIcon,
   type LucideIcon,
 } from 'lucide-react'
@@ -50,7 +51,8 @@ const NAV_ITEMS: NavItem[] = [
   },
   { href: '/accounts', label: 'Cuentas', icon: WalletIcon, primary: true },
   { href: '/budgets', label: 'Presupuestos', short: 'Presup.', icon: PiggyBankIcon, primary: true },
-  { href: '/reports', label: 'Evolución', icon: ChartColumnIcon, primary: false },
+  { href: '/goals', label: 'Objetivos', icon: TargetIcon, primary: false },
+  { href: '/reports', label: 'Informes', icon: ChartColumnIcon, primary: false },
   { href: '/recurring', label: 'Recurrentes', icon: RepeatIcon, primary: false },
   { href: '/categories', label: 'Categorías', icon: TagIcon, primary: false },
 ]

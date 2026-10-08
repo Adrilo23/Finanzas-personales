@@ -4,7 +4,7 @@ Modelo orientado a PostgreSQL (Supabase), pensado como un *ledger* (libro de mov
 
 > **Fuente de verdad:** las migraciones de `supabase/migrations/` y los tipos generados en `lib/supabase/database.types.ts` (`npm run db:types`). Este documento las resume. Cualquier cambio de esquema se hace con una migración nueva numerada y se refleja aquí en el mismo commit.
 >
-> Última revisión contra las migraciones: 2026-10-04 (hasta `0009`).
+> Última revisión contra las migraciones: 2026-10-04 (hasta `0012`).
 
 ## Convenciones
 
@@ -116,6 +116,13 @@ Un límite mensual por categoría de gasto; se reinicia cada mes (no hay histór
 | created_at | timestamptz | |
 
 `unique (user_id, category_id)`: un presupuesto por categoría; guardar otro para la misma categoría sustituye el importe (`upsert`). La FK no pasa por RLS, así que la Server Action comprueba que la categoría es del usuario y de tipo `expense`. Lo gastado se calcula en `lib/budgets.ts`: movimientos de gasto del mes en curso, **sumando los de las subcategorías al padre**. Avisos: «Cerca del límite» desde el 80 %, «Superado» por encima del 100 %.
+
+### Objetivos de ahorro — `0012`
+**savings_goals**: `id`, `user_id`, `name` (1-80), `icon` (emoji opcional), `target_cents` (`> 0`), `target_date` (opcional), `created_at`.
+
+**goal_contributions**: `id`, `user_id`, `goal_id` (FK → savings_goals, `on delete cascade`), `amount_cents` (`<> 0`; positivo = aportación, negativo = retirada), `contribution_date`, `note`, `created_at`. La política de insert exige que el objetivo sea del mismo usuario (la FK no pasa por RLS).
+
+Lo ahorrado es la suma de aportaciones (mínimo 0; la action impide retirar más de lo ahorrado). **No son movimientos** (`transactions`): no afectan a saldos, informes ni presupuestos. Progreso, ritmo y estado: `lib/goals.ts`.
 
 ### Inversiones — `0007`
 Una cuenta de tipo `investment` (MyInvestor, Kraken…) contiene **activos**: fondos (con ISIN) o criptomonedas (sin ISIN). Todos se identifican por su código en la fuente de precios (`symbol`), y las participaciones las introduce el usuario desde su bróker.
