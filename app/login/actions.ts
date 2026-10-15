@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { loginSchema, registerSchema } from '@/lib/validation/auth-schemas'
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 export async function login(formData: FormData) {
@@ -35,12 +36,19 @@ export async function register(formData: FormData) {
     return { error: parsed.error.issues[0].message }
   }
 
+  // El origen sale de la petición: así el enlace de confirmación apunta siempre
+  // al dominio desde el que se registró el usuario (producción o local).
+  const h = await headers()
+  const host = h.get('x-forwarded-host') ?? h.get('host')
+  const proto = h.get('x-forwarded-proto') ?? (host?.startsWith('localhost') ? 'http' : 'https')
+  const siteUrl = host ? `${proto}://${host}` : process.env.NEXT_PUBLIC_SITE_URL
+
   const supabase = await createClient()
   const { error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+      emailRedirectTo: `${siteUrl}/auth/callback`,
     },
   })
 
