@@ -4,9 +4,9 @@
 >
 > **Fuente de verdad:** este archivo del repo (GitHub `Adrilo23/Finanzas-personales`). Claude Code lo actualiza al terminar cada tarea, en el mismo commit que el código.
 
-## Estado actual: 🟢 Fase 1 y Fase 3 completas, con tests y CI → Fase 3b completa salvo la actualización diaria programada; objetivos de ahorro e informe mensual en PDF hechos (migración `0012` aplicada el 2026-10-07 desde el SQL Editor: falta `npx supabase migration repair --status applied 0012` para que el historial coincida); siguiente: página de ayuda para nuevos usuarios (Fase 4; la lista de primeros pasos ya está) o actualización programada de precios
+## Estado actual: 🟢 Fase 1 y Fase 3 completas, con tests y CI → Fase 3b completa (la actualización programada de precios se aparca, ver nota); objetivos de ahorro e informe mensual en PDF hechos; historial de migraciones remoto al día (0001-0012); página de ayuda con guía de instalación hecha; siguiente: ayudas contextuales "?" o modo demo + landing (Fase 4)
 
-Última actualización: 2026-10-07
+Última actualización: 2026-11-03
 
 Leyenda: `[x]` hecho · `[~]` hecho en parte (ver nota) · `[ ]` pendiente
 
@@ -58,10 +58,12 @@ Idea surgida al usar la app: una cuenta como MyInvestor contiene fondos cuyo val
   - Tipo de cuenta `investment`; pantalla de detalle `/accounts/[id]` con valor, aportado y rentabilidad (€ y %) por activo y en total; el valor cuenta en el saldo de la cuenta y en el total del inicio
   - Activos: fondos por ISIN (validado con dígito de control) y **criptomonedas** por código (p. ej. BTC → `BTC-EUR`, para Kraken). Nombre y código de precios resueltos automáticamente; solo activos en euros
   - Compras y ventas con participaciones introducidas a mano desde el bróker (decisión 2026-10-04); no se puede vender más de lo que se tiene
-  - Precios refrescados al cargar la app si llevan más de 6 h sin consultarse, y al añadir un activo (últimos 3 meses). Fuente detrás de la interfaz `PriceProvider` (`lib/prices.ts`)
+  - Precios refrescados al cargar la app si llevan más de 6 h sin consultarse (cripto: 1 h desde 2026-11-03), y al añadir un activo (últimos 3 meses). Fuente detrás de la interfaz `PriceProvider` (`lib/prices.ts`)
   - Precios guardados por usuario (`asset_prices`) para no necesitar todavía la service role key
   - Al convertir una cuenta existente (p. ej. My Investor, que tenía todo en el saldo inicial) a tipo Inversión, poner el saldo inicial a 0 antes de añadir los fondos, o se contará dos veces (el formulario lo avisa)
-- [ ] **Tanda 2 — Actualización diaria programada** (Vercel Cron o Supabase pg_cron + Edge Function), con la fuente detrás de una interfaz `PriceProvider` intercambiable
+- [ ] **Tanda 2 — Actualización diaria programada** (Vercel Cron o Supabase pg_cron + Edge Function), con la fuente detrás de una interfaz `PriceProvider` intercambiable — **aparcada (2026-11-03)**
+  - Revisado si merece la pena refrescar 4 veces al día con un programador: **no por ahora**. Los fondos publican un único valor liquidativo al día (y Yahoo lo da con 1 día hábil de retraso), así que más de una consulta diaria no aporta nada. Las criptomonedas sí cambian a todas horas, pero el refresco perezoso actual (al abrir la app, si han pasado más de 6 h) ya da hasta 4 actualizaciones al día justo cuando se miran; como se guarda un precio por día y el del día se sobrescribe, cada refresco actualiza el valor. Además, al consultar 1 mes de histórico, se rellenan solos los huecos de los días sin abrir la app
+  - Un programador solo aporta valor cuando haya algo que lea los precios sin abrir la app (informe por email, avisos). Entonces: una ejecución diaria para fondos (Vercel Hobby solo permite crons diarios) y, si hace falta más frecuencia para cripto, pg_cron. Mientras tanto, hecho (2026-11-03): el refresco perezoso usa un intervalo por tipo, 1 h para cripto y 6 h para fondos (`isPriceStale` en `lib/investments.ts`, con tests)
   - Requiere `SUPABASE_SERVICE_ROLE_KEY` y una clave de cron en Vercel, solo en servidor. Es la única excepción a "todo con anon key + RLS": la tabla de precios no tiene datos personales y los usuarios solo la leen
   - Uso personal/amigos: fuente gratuita (API no oficial de Yahoo). **Antes de vender: proveedor de datos con licencia comercial**
   - Cobertura comprobada en Yahoo (2026-10-04), los tres en EUR y con valor liquidativo diario (desfase normal de 1 día hábil): Fidelity MSCI World Index P-Acc (`IE00BYX5NX33` → `0P0001CLDK.F`), Amundi IS Core MSCI Emerging Markets IE-C (`LU0996175948` → `0P00011MU2.F`) y Groupama Trésorerie IC (`FR0000989626` → `0P00000LRT.F`)
@@ -86,8 +88,8 @@ Idea surgida al usar la app: una cuenta como MyInvestor contiene fondos cuyo val
 ## Fase 4 — Pulido y preparación para portfolio/LinkedIn
 - [x] Diseño UI cuidado (no solo funcional) — rediseño completo: sistema de tokens (modo claro/oscuro), navegación con barra inferior en móvil, formularios nuevos, estados vacíos y de carga, gráfica accesible
 - [ ] Ayuda para nuevos usuarios (prioritaria: la usarán familia y amigos y el objetivo es venderla)
-  - [x] Lista de primeros pasos en el inicio que se marca sola según el uso (cuenta, movimiento, presupuesto, recurrente, objetivo); se puede ocultar (queda en el navegador) y desaparece al completarla. **Falta el paso «instalar en el móvil»**, que irá con la página de ayuda y la guía de iPhone
-  - [ ] Página de ayuda en la app (6-8 preguntas reales) + guía de instalación específica para iPhone (Safari no ofrece instalar la PWA)
+  - [x] Lista de primeros pasos en el inicio que se marca sola según el uso (cuenta, movimiento, presupuesto, recurrente, objetivo, instalar en el móvil); se puede ocultar (queda en el navegador) y desaparece al completarla. El paso de instalar lo marca el cliente (`useInstallState`): hecho si la app se abre como instalada o se instaló desde este navegador
+  - [x] Página de ayuda `/help` (pública, para seguir la guía antes de registrarse; enlazada desde el login, el menú de usuario y «Más»): 8 preguntas frecuentes (importe en positivo, tipos de movimiento, recurrentes, subcategorías en presupuestos, corregir/borrar, inversiones y precios, objetivos, sin conexión) y guía de instalación para iPhone/iPad, Android y ordenador que se abre en la del dispositivo detectado (`lib/install.ts`), con botón «Instalar» donde el navegador lo permite (Chrome/Edge). Pendiente: probarla en un iPhone y un Android reales
   - [ ] Ayudas contextuales "?" solo en los puntos confusos: importe en positivo, gasto/inversión/transferencia, recurrentes generados al abrir la app, subcategorías que suman al padre
   - [ ] Modo demo con datos de ejemplo ("Probar sin registrarme"), junto con la landing
 - [ ] Landing page del producto

@@ -123,3 +123,22 @@ export function gainPercent(gainCents: number, investedCents: number): number | 
   if (investedCents <= 0) return null
   return (gainCents / investedCents) * 100
 }
+
+const HOUR_MS = 60 * 60 * 1000
+
+/**
+ * Cada cuánto se vuelve a consultar la fuente según el tipo de activo. Los fondos
+ * publican un único valor liquidativo al día, así que consultarlos más a menudo no
+ * aporta nada; las criptomonedas cotizan a todas horas.
+ */
+export const PRICE_REFRESH_MS: Record<'fund' | 'crypto', number> = {
+  fund: 6 * HOUR_MS,
+  crypto: 1 * HOUR_MS,
+}
+
+/** Si toca refrescar el precio de un activo. Un tipo desconocido se trata como fondo. */
+export function isPriceStale(assetType: string, checkedAt: string | null, now: Date): boolean {
+  if (!checkedAt) return true
+  const every = assetType === 'crypto' ? PRICE_REFRESH_MS.crypto : PRICE_REFRESH_MS.fund
+  return now.getTime() - new Date(checkedAt).getTime() >= every
+}
