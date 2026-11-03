@@ -338,6 +338,27 @@ export type Database = {
           },
         ]
       }
+      login_attempts: {
+        Row: {
+          blocked_until: string | null
+          failures: number
+          key: string
+          window_start: string
+        }
+        Insert: {
+          blocked_until?: string | null
+          failures?: number
+          key: string
+          window_start?: string
+        }
+        Update: {
+          blocked_until?: string | null
+          failures?: number
+          key?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       recurring_allocations: {
         Row: {
           amount_cents: number
@@ -643,12 +664,18 @@ export type Database = {
       }
     }
     Functions: {
-      login_throttle_fail: { Args: { p_keys: string[] }; Returns: number }
-      login_throttle_status: { Args: { p_keys: string[] }; Returns: number }
       convert_to_transfer: {
         Args: { p_to_account: string; p_transaction_id: string }
         Returns: string
       }
+      login_throttle_fail: { Args: { p_keys: string[] }; Returns: number }
+      login_throttle_status: { Args: { p_keys: string[] }; Returns: number }
+      owns_account: { Args: { p_id: string }; Returns: boolean }
+      owns_category: { Args: { p_id: string }; Returns: boolean }
+      owns_holding: { Args: { p_id: string }; Returns: boolean }
+      owns_recurring_rule: { Args: { p_id: string }; Returns: boolean }
+      owns_transaction: { Args: { p_id: string }; Returns: boolean }
+      owns_transaction_path: { Args: { p_folder: string }; Returns: boolean }
       run_contribution_plan: {
         Args: { p_dates: string[]; p_next: string; p_rule_id: string }
         Returns: undefined
