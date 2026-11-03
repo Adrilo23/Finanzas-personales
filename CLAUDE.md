@@ -26,8 +26,8 @@ npm test          # tests (Vitest), una pasada
 npm run test:watch  # tests en modo vigilancia
 npm run db:types  # regenera lib/supabase/database.types.ts desde la BD remota
 
-npx supabase migration list  # estado local vs remoto de las migraciones
-npx supabase db push         # aplica migraciones pendientes al proyecto remoto
+npx supabase migration list --remote  # estado local vs remoto de las migraciones
+npx supabase db push --remote         # aplica migraciones pendientes al proyecto remoto
 ```
 
 Los tests (Vitest, entorno node, `TZ=Europe/Madrid`) cubren la lógica pura de `lib/` y viven junto al código (`lib/*.test.ts`). Para que algo sea testeable, separa el cálculo de la consulta a Supabase: `getX()` consulta y delega en una función pura `computeX()` (ver `lib/budgets.ts`, `lib/reports.ts`, `lib/recurring.ts`, `lib/stats.ts`). Todo cambio en dinero, signos, fechas o agregados debe venir con su test. GitHub Actions (`.github/workflows/ci.yml`) pasa lint, tipos y tests en cada push a `main`.
@@ -95,4 +95,4 @@ Se guardan en el bucket privado `attachments` con la ruta `{user_id}/{transactio
 Serwist con `@serwist/turbopack`: `next.config.ts` lo envuelve con `withSerwist`, el worker está en `app/sw.ts` y se sirve desde `app/serwist/[path]/route.ts`. Si la navegación falla sin conexión, se muestra `/offline`. La revisión de caché es el hash del commit de git.
 
 ### Base de datos
-Las migraciones SQL están en `supabase/migrations/`, numeradas (`000N_descripcion.sql`). El repo está enlazado con la CLI al proyecto remoto (`kwouosaoaeydipzavjdr`): las migraciones se aplican con `npx supabase db push` y el historial remoto debe coincidir con `migration list`. No hay base de datos local en Docker. Después de cambiar el esquema, ejecuta `npm run db:types`. Los clientes de `lib/supabase/` están tipados con `Database`, así que las consultas tienen tipos (las columnas de las vistas salen anulables). Cada tabla nueva debe activar RLS e incluir las cuatro políticas `*_own`. Un trigger sobre `auth.users` precarga las categorías por defecto de cada usuario nuevo.
+Las migraciones SQL están en `supabase/migrations/`, numeradas (`000N_descripcion.sql`). El repo está enlazado con la CLI al proyecto remoto (`kwouosaoaeydipzavjdr`): las migraciones se aplican con `npx supabase db push --remote` y el historial remoto debe coincidir con `migration list --remote`. Desde la CLI 3 (la que descarga `npx`, porque no está fijada en `package.json`), sin `--remote` los comandos apuntan a una base local en Docker que no existe y fallan con `ECONNREFUSED 127.0.0.1:54322`. No hay base de datos local en Docker. Después de cambiar el esquema, ejecuta `npm run db:types`. Los clientes de `lib/supabase/` están tipados con `Database`, así que las consultas tienen tipos (las columnas de las vistas salen anulables). Cada tabla nueva debe activar RLS e incluir las cuatro políticas `*_own`. Un trigger sobre `auth.users` precarga las categorías por defecto de cada usuario nuevo.
