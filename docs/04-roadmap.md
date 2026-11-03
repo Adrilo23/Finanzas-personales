@@ -4,7 +4,7 @@
 >
 > **Fuente de verdad:** este archivo del repo (GitHub `Adrilo23/Finanzas-personales`). Claude Code lo actualiza al terminar cada tarea, en el mismo commit que el código.
 
-## Estado actual: 🟢 Fases 1, 3, 3b y 3c completas, con tests y CI (la actualización programada de precios y el envío automático del informe quedan aparcados, ver notas). Gráfica anual, informe anual con PDF, informe mensual por email, objetivos vinculados a una cuenta y conversión de inversiones antiguas a traspaso hechos. **Migración `0013` escrita pero sin aplicar en remoto** (`npx supabase db push --remote` y después `npm run db:types`): hasta entonces, Objetivos y «Convertir en traspaso» fallan en producción. Siguiente: ayudas contextuales "?" o modo demo + landing (Fase 4)
+## Estado actual: 🟢 Fases 1, 3, 3b y 3c completas, con tests y CI (la actualización programada de precios y el envío automático del informe quedan aparcados, ver notas). Gráfica anual, informe anual con PDF, informe mensual por email, objetivos vinculados a una cuenta y conversión de inversiones antiguas a traspaso hechos. Migraciones 0001-0013 aplicadas en remoto; CLI de Supabase fijada (`supabase@3.0.0` en devDependencies). Siguiente: ayudas contextuales "?" o modo demo + landing (Fase 4)
 
 Última actualización: 2026-11-03
 
