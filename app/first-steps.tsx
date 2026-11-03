@@ -4,13 +4,17 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { CheckIcon, XIcon } from 'lucide-react'
 import type { FirstStep } from '@/lib/onboarding'
+import { useInstallState } from '@/components/use-install-state'
 import { cn } from '@/lib/utils'
 
 const STORAGE_KEY = 'finanzas:first-steps-dismissed'
 
 /** Lista de primeros pasos del inicio. Se puede ocultar; la preferencia queda en este navegador. */
-export function FirstSteps({ steps }: { steps: FirstStep[] }) {
+export function FirstSteps({ steps: serverSteps }: { steps: FirstStep[] }) {
   const [dismissed, setDismissed] = useState(false)
+  const { installed } = useInstallState()
+  // El servidor no sabe si la app está instalada en este dispositivo: lo marca el cliente.
+  const steps = serverSteps.map((s) => (s.key === 'install' ? { ...s, done: installed } : s))
 
   useEffect(() => {
     try {

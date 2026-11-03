@@ -1,4 +1,4 @@
-export type FirstStepKey = 'account' | 'transaction' | 'budget' | 'recurring' | 'goal'
+export type FirstStepKey = 'account' | 'transaction' | 'budget' | 'recurring' | 'goal' | 'install'
 
 export type FirstStep = {
   key: FirstStepKey
@@ -19,6 +19,9 @@ export type UsageCounts = {
 /**
  * Lista de primeros pasos del inicio. Cada paso se marca solo según lo que el usuario
  * ya ha creado. Parte pura (sin base de datos), para poder testearla.
+ *
+ * El paso «install» siempre sale sin hacer: el servidor no puede saber si la app está
+ * instalada en el dispositivo, así que lo marca el cliente (`FirstSteps`).
  */
 export function computeFirstSteps(counts: UsageCounts): FirstStep[] {
   return [
@@ -56,6 +59,13 @@ export function computeFirstSteps(counts: UsageCounts): FirstStep[] {
       text: 'Un viaje, un fondo de emergencia… y sigue tu progreso.',
       href: '/goals',
       done: counts.goals > 0,
+    },
+    {
+      key: 'install',
+      title: 'Instálala en tu móvil',
+      text: 'Tenla a mano como una app más. Te explicamos cómo en tu dispositivo.',
+      href: '/help#instalar',
+      done: false,
     },
   ]
 }

@@ -8,6 +8,7 @@ import {
   ArrowLeftRightIcon,
   ChartColumnIcon,
   ChevronRightIcon,
+  CircleHelpIcon,
   EllipsisIcon,
   HouseIcon,
   LogOutIcon,
@@ -37,6 +38,8 @@ type NavItem = {
   icon: LucideIcon
   /** En móvil, va en la barra inferior (true) o dentro de «Más» (false). */
   primary: boolean
+  /** En escritorio, false lo saca de la barra superior (queda en el menú de usuario). */
+  topBar?: boolean
 }
 
 /** Orden de la barra superior (escritorio). Si añades una sección, añádela aquí. */
@@ -55,7 +58,10 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/reports', label: 'Informes', icon: ChartColumnIcon, primary: false },
   { href: '/recurring', label: 'Recurrentes', icon: RepeatIcon, primary: false },
   { href: '/categories', label: 'Categorías', icon: TagIcon, primary: false },
+  { href: '/help', label: 'Ayuda', icon: CircleHelpIcon, primary: false, topBar: false },
 ]
+
+const TOP_BAR_ITEMS = NAV_ITEMS.filter((item) => item.topBar !== false)
 
 const PRIMARY_ITEMS = NAV_ITEMS.filter((item) => item.primary)
 const MORE_ITEMS = NAV_ITEMS.filter((item) => !item.primary)
@@ -88,7 +94,7 @@ export function NavLinks({ email }: { email: string }) {
 
           <nav aria-label="Principal" className="hidden flex-1 lg:block">
             <ul className="flex items-center gap-0.5">
-              {NAV_ITEMS.map((item) => {
+              {TOP_BAR_ITEMS.map((item) => {
                 const active = isActive(pathname, item.href)
                 return (
                   <li key={item.href}>
@@ -253,6 +259,15 @@ function UserMenu({ email }: { email: string }) {
             <p className="truncate font-medium">{email}</p>
           </div>
           <DropdownMenu.Separator className="-mx-1.5 my-1 h-px bg-border" />
+          <DropdownMenu.Item asChild>
+            <Link
+              href="/help"
+              className="flex w-full cursor-default items-center gap-2 rounded-lg px-2.5 py-2 outline-none data-highlighted:bg-muted"
+            >
+              <CircleHelpIcon aria-hidden className="size-4 text-muted-foreground" />
+              Ayuda
+            </Link>
+          </DropdownMenu.Item>
           <form action={logout}>
             <DropdownMenu.Item asChild>
               <button

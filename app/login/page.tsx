@@ -78,6 +78,14 @@ export default function LoginPage() {
           Crea una
         </Link>
       </p>
+      <p className="mt-2 text-center text-sm text-muted-foreground">
+        <Link
+          href="/help#instalar"
+          className="font-medium text-foreground underline-offset-4 hover:underline"
+        >
+          Cómo instalarla en el móvil
+        </Link>
+      </p>
     </AuthShell>
   )
 }

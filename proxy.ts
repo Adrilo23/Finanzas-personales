@@ -1,7 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PUBLIC_PATHS = ['/login', '/register', '/auth/callback', '/offline']
+// /help es pública para poder seguir la guía de instalación antes de registrarse.
+const PUBLIC_PATHS = ['/login', '/register', '/auth/callback', '/offline', '/help']
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
