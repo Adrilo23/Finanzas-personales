@@ -21,6 +21,8 @@ export async function GET(request: NextRequest) {
     headers: {
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename="informe-${year}.pdf"`,
+      // Datos privados: ni el navegador ni un proxy intermedio deben guardarlos (auditoría F-06).
+      'Cache-Control': 'private, no-store, max-age=0',
     },
   })
 }

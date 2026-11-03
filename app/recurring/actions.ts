@@ -5,6 +5,7 @@ import { recurringSchema, recurringTransferSchema } from '@/lib/validation/recur
 import { eurosToCents } from '@/lib/money'
 import { validateAllocations, type Allocation } from '@/lib/allocations'
 import { revalidatePath } from 'next/cache'
+import { positiveAmount } from '@/lib/validation/money-schemas'
 
 /** Día de referencia: los vencimientos mensuales/anuales vuelven siempre a este día. */
 const anchorDayOf = (date: string) => Number(date.slice(8, 10))
@@ -72,18 +73,23 @@ async function parseTransferRule(supabase: Supabase, formData: FormData) {
   }
 
   const totalCents = eurosToCents(parsed.data.amount)
-  let allocations: Allocation[] = []
+  let raw: unknown
   try {
-    const raw = JSON.parse(String(formData.get('allocations') || '[]')) as {
-      holdingId: string
-      amount: number
-    }[]
-    allocations = raw.map((a) => ({
-      holdingId: String(a.holdingId ?? ''),
-      amountCents: eurosToCents(Number(a.amount)),
-    }))
+    raw = JSON.parse(String(formData.get('allocations') || '[]'))
   } catch {
     return { error: 'Reparto no válido' } as const
+  }
+  if (!Array.isArray(raw) || raw.length > 50) {
+    return { error: 'Reparto no válido' } as const
+  }
+  const allocations: Allocation[] = []
+  for (const line of raw as { holdingId?: unknown; amount?: unknown }[]) {
+    // Mismas reglas que cualquier importe: positivo, céntimos exactos y bajo el tope.
+    const amount = positiveAmount.safeParse(Number(line?.amount))
+    if (!amount.success) {
+      return { error: `Reparto: ${amount.error.issues[0].message.toLowerCase()}` } as const
+    }
+    allocations.push({ holdingId: String(line?.holdingId ?? ''), amountCents: eurosToCents(amount.data) })
   }
   const allocationError = validateAllocations(totalCents, allocations)
   if (allocationError) {
@@ -263,11 +269,17 @@ export async function toggleRecurringRule(id: string, active: boolean) {
 
 export async function deleteRecurringRule(id: string) {
   const supabase = await createClient()
-  const { error } = await supabase.from('recurring_rules').delete().eq('id', id)
+  const { data: deleted, error } = await supabase
+    .from('recurring_rules')
+    .delete()
+    .eq('id', id)
+    .select('id')
 
   if (error) {
     return { error: error.message }
   }
+  // La RLS convierte un id ajeno o inexistente en «0 filas», no en error.
+  if (!deleted?.length) return { error: 'No se ha encontrado: puede que ya estuviera borrado' }
 
   revalidatePath('/recurring')
   return { success: true }

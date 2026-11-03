@@ -34,6 +34,15 @@ Objetivo: poder llevar mis propias cuentas reales, aunque sea con UI básica.
 ## Calidad
 - [x] Tests con Vitest de la lógica de dinero y cálculos (`lib/*.test.ts`) y CI en GitHub Actions (lint, tipos, tests)
 - [x] Corregido al escribir los tests: `parseEurosInput` leía "1.234,56" como 1,23 €; ahora entiende el formato español con miles
+- [x] **Auditoría de seguridad externa (26–27 oct 2026) atendida** (2026-11-03, migración `0014`):
+  - Dependencias: Next 16.2.12 → 16.4.5 (avisos de RCE GHSA-2464 / GHSA-673q, no explotados pero en rango), React 19.2.9, zod 4.6.7, `xlsx` 0.20.3 desde el CDN oficial de SheetJS; `shadcn` pasa a devDependencies. `npm audit --omit=dev`: 0 vulnerabilidades
+  - F-04: cookies de sesión `HttpOnly`, `Secure` y `SameSite=Lax`. Se elimina el cliente de Supabase del navegador: los adjuntos pasan a Server Actions con URL de subida firmada
+  - F-05: importes con más de dos decimales rechazados en todos los formularios (`positiveAmount`) y `check` de importe ≠ 0 en la BD; tope de 1.000 millones de € por importe
+  - F-01/F-02/F-03: CSP con nonce por petición, `frame-ancestors 'none'`, `X-Frame-Options`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`; sin `X-Powered-By`
+  - F-06: descargas PDF/XLSX con `Cache-Control: private, no-store`
+  - F-08: limitador de intentos de login en la BD (5 por IP+email y 30 por IP cada 15 min) y mensaje de error uniforme
+  - Observaciones de fase 2: los `delete*` distinguen «0 filas» de éxito; las políticas RLS exigen que cada FK sea del usuario (antes se podía crear un adjunto propio apuntando al movimiento y la ruta de otro); bucket de adjuntos limitado a imágenes/PDF de 10 MB
+  - F-07 (traspaso sin saldo suficiente): **no se bloquea**, ver Decisiones
 - [x] Recurrentes mensuales en día 29-31: antes, al pasar por un mes corto, bajaban a 28 y se quedaban ahí. Arreglado con `anchor_day` (migración `0006`): cada vencimiento vuelve al día original. Las reglas que ya hubieran derivado antes del arreglo se quedan en el día en que estaban
 
 ## Fase 2 — PWA y multiplataforma
@@ -112,6 +121,7 @@ Idea surgida al usar la app: una cuenta como MyInvestor contiene fondos cuyo val
 ---
 
 ## Decisiones (antes "pendientes")
+- **¿Impedir movimientos o traspasos que dejen una cuenta en negativo?** (auditoría F-07, 2026-11-03) — No. La app registra lo que ya ha pasado en el banco, no mueve dinero: una tarjeta de crédito, un descubierto o un traspaso anotado antes que la nómina dejan saldos negativos legítimos, y bloquearlos obligaría a falsear el orden real. El riesgo de la auditoría (un usuario solo puede alterar sus propios saldos) se acota con el tope de 1.000 millones de € por importe y los `check` de la BD.
 - **¿Editar/borrar transacciones directamente o solo con movimientos de ajuste?** — Edición directa y borrado lógico (`deleted_at`). `updated_at` registra cuándo se modificó; si se pasa a SaaS se puede añadir auditoría de cambios.
 - **¿Multi-moneda desde el MVP?** — Pospuesto. Las columnas `currency` existen, pero la UI trabaja en EUR y los totales suman sin convertir.
 - **¿Categorías por defecto fijas o editables?** — Editables: se precargan por usuario y se pueden renombrar, borrar o ampliar. El tipo de una categoría no se puede cambiar una vez creada.

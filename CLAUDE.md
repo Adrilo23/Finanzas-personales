@@ -40,8 +40,10 @@ Variables de entorno (en `.env.local`): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC
 
 ### Auth y Supabase
 - `proxy.ts` (en Next 16 sustituye a `middleware.ts`) refresca la sesión de Supabase y redirige a `/login` a quien no esté autenticado. Las rutas públicas están en `PUBLIC_PATHS`. Si añades una ruta pública, añádela ahí y, si es un recurso estático, también al `matcher`.
-- Usa `lib/supabase/server.ts` en Server Components, Server Actions y Route Handlers, y `lib/supabase/client.ts` en componentes cliente (por ejemplo, para subir adjuntos a Storage).
+- Usa `lib/supabase/server.ts` en Server Components, Server Actions y Route Handlers. **No hay cliente de Supabase en el navegador**: las cookies de sesión son `HttpOnly` y `Secure` (`lib/supabase/cookie-options.ts`, auditoría F-04), así que un componente cliente que necesite datos llama a una Server Action. Para subir a Storage, el servidor entrega una URL firmada (ver Adjuntos). No vuelvas a crear `createBrowserClient`: rompería con cookies `HttpOnly`.
 - Todo usa la anon key + RLS: cada tabla tiene políticas `user_id = auth.uid()`. Al insertar hay que pasar siempre `user_id: user.id`, sacado de `supabase.auth.getUser()`.
+- **PostgREST es accesible directamente con el JWT del usuario**, sin pasar por las Server Actions: las validaciones de la app no bastan. Las políticas de insert/update comprueban también que cada FK es del usuario (`owns_account`, `owns_category`, `owns_transaction`, `owns_recurring_rule`, `owns_holding`; migración `0014`), y los importes tienen `check` en la BD. Una tabla nueva con FK a datos del usuario debe hacer lo mismo.
+- Un `delete` que la RLS filtra devuelve «0 filas», no error: las actions piden `.select('id')` y responden «No se ha encontrado» si no borraron nada.
 
 ### Patrón por funcionalidad
 Cada sección (`app/accounts`, `app/categories`, `app/transactions`, `app/recurring`, `app/budgets`) sigue la misma estructura:
@@ -50,7 +52,7 @@ Cada sección (`app/accounts`, `app/categories`, `app/transactions`, `app/recurr
 - `new-*-dialog.tsx`: diálogo cliente con react-hook-form + `zodResolver` usando el mismo esquema, que convierte los datos a `FormData` y llama a la action.
 
 ### Modelo de dinero (importante)
-- Los importes se guardan como `bigint` en céntimos (`amount_cents`, `initial_balance_cents`). Las conversiones euros/céntimos se hacen **solo** en `lib/money.ts` (`eurosToCents`, `centsToEuros`, `formatCents`, `parseEurosInput`).
+- Los importes se guardan como `bigint` en céntimos (`amount_cents`, `initial_balance_cents`). Las conversiones euros/céntimos se hacen **solo** en `lib/money.ts` (`eurosToCents`, `centsToEuros`, `formatCents`, `parseEurosInput`). Todo importe que llega del usuario se valida con `positiveAmount` / `nonNegativeAmount` (`lib/validation/money-schemas.ts`): finito, como mucho dos decimales (para que nunca acabe en 0 céntimos) y hasta 1.000 millones de €.
 - **El signo lo pone el servidor a partir del tipo de categoría** con `applyCategorySign` (`lib/money.ts`): `income` es positivo; `expense`, `investment` o sin categoría, negativos. El usuario siempre introduce importes positivos.
 - `transactions` usa soft delete (`deleted_at`). Toda consulta de movimientos debe filtrar con `.is('deleted_at', null)`.
 - El saldo de cada cuenta sale de la vista `account_balances` (migración 0002, `security_invoker`), no se calcula en el cliente.
@@ -77,7 +79,7 @@ Las cuentas de tipo `investment` tienen activos (`holdings`: fondos por ISIN o c
 Cualquier cuenta puede tener `interest_rate` (% anual) e `interest_next_date`. `processAccountInterest` (`lib/interest.ts`, llamado desde `components/app-nav.tsx`) abona cada día 1 el interés del mes anterior: saldo medio diario de efectivo (movimientos + operaciones con `affects_cash`) × % ÷ 12, como ingreso de la categoría «Intereses». Antes de insertar, reserva el periodo moviendo la fecha con un update condicional, para no duplicar si coinciden dos cargas. El cálculo es puro y tiene tests (`computeInterestPayments`).
 
 ### Adjuntos
-Se guardan en el bucket privado `attachments` con la ruta `{user_id}/{transaction_id}/archivo`; la política de Storage exige que la primera carpeta sea `auth.uid()`. Al borrar, se elimina primero el archivo de Storage y después la fila (`app/transactions/attachments-actions.ts`).
+Se guardan en el bucket privado `attachments` (solo JPG/PNG/WEBP/PDF de hasta 10 MB) con la ruta `{user_id}/{transaction_id}/archivo`; la política de Storage exige que la primera carpeta sea `auth.uid()` y la segunda un movimiento propio. Todo pasa por `app/transactions/attachments-actions.ts`: `prepareAttachmentUpload` comprueba el movimiento y devuelve una URL de subida firmada (el navegador sube con `fetch`, sin sesión), `createAttachment` solo acepta rutas propias (`lib/attachments.ts`), y ver/borrar sacan la ruta de la fila, nunca del cliente. Al borrar, se elimina primero el archivo de Storage y después la fila.
 
 ### Interfaz
 - Tokens en `app/globals.css`: neutros cálidos, un único acento (`brand`) y colores semánticos de importes (`positive`, `negative`, `invest`). El modo oscuro sigue `prefers-color-scheme` (la variante `dark:` es una media query, no una clase). Los colores de la gráfica (`chart-1..3`) están validados para daltonismo en el orden ingresos → inversión → gastos; no los reordenes.
@@ -90,6 +92,12 @@ Se guardan en el bucket privado `attachments` con la ruta `{user_id}/{transactio
 `app/transactions/export/route.ts` (runtime `nodejs`) genera XLSX (con `xlsx`) o PDF (con `jspdf` + `jspdf-autotable`) según los mismos filtros de `/transactions`. Los informes mensual (`/reports/monthly`) y anual (`/reports/annual`) tienen su cálculo puro en `lib/monthly-report.ts` / `lib/annual-report.ts`, su PDF en `lib/*-report-pdf.ts` y su ruta `export`. El año en curso se compara con el mismo periodo del año anterior. El mensual se puede enviar al correo del usuario («Envíamelo», `app/reports/monthly/actions.ts`): siempre a su propio email, nunca a un destinatario que llegue del cliente.
 
 **Límite de 1000 filas:** PostgREST corta cada respuesta en `max_rows` (1000) sin avisar. Cualquier consulta de movimientos que pueda superar ese número (un año, todo el histórico) debe paginar con `fetchAllRows` (`lib/fetch-all.ts`) y un orden estable (`.order('id')`).
+
+### Seguridad
+- **Cabeceras:** `proxy.ts` genera un nonce por petición y la CSP (`buildCsp` en `lib/security-headers.ts`): scripts solo con nonce, `frame-ancestors 'none'`, `connect-src` limitado a la app y Supabase. Next pone el nonce en sus scripts porque todas las páginas son dinámicas; una página estática no lo recibiría. Las cabeceras fijas (`X-Frame-Options`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`) están en `next.config.ts`. Si añades un origen externo (fuente, API desde el navegador), añádelo a la CSP.
+- **Login:** `login` limita los fallos por IP+email (5 en 15 min) y por IP (30) con las funciones `login_throttle_status` / `login_throttle_fail` (migración `0014`, tabla `login_attempts` sin acceso directo) y responde siempre «Email o contraseña incorrectos». Si el limitador falla, no bloquea el login.
+- **Descargas** (PDF/XLSX): `Cache-Control: private, no-store`.
+- **Dependencias:** `npm audit --omit=dev` debe quedar a 0. `xlsx` se instala desde el CDN oficial de SheetJS (la versión de npm está abandonada y tiene avisos). Los avisos que quedan son de herramientas de desarrollo (eslint, build de Serwist, CLI de shadcn) y no llegan a producción.
 
 ### PWA / offline
 Serwist con `@serwist/turbopack`: `next.config.ts` lo envuelve con `withSerwist`, el worker está en `app/sw.ts` y se sirve desde `app/serwist/[path]/route.ts`. Si la navegación falla sin conexión, se muestra `/offline`. La revisión de caché es el hash del commit de git.

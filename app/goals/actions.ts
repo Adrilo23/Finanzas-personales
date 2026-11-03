@@ -49,8 +49,14 @@ export async function saveGoal(formData: FormData) {
 
 export async function deleteGoal(id: string) {
   const supabase = await createClient()
-  const { error } = await supabase.from('savings_goals').delete().eq('id', id)
+  const { data: deleted, error } = await supabase
+    .from('savings_goals')
+    .delete()
+    .eq('id', id)
+    .select('id')
   if (error) return { error: error.message }
+  // La RLS convierte un id ajeno o inexistente en «0 filas», no en error.
+  if (!deleted?.length) return { error: 'No se ha encontrado: puede que ya estuviera borrado' }
   revalidateGoals()
   return { success: true }
 }
@@ -109,8 +115,14 @@ export async function addContribution(formData: FormData) {
 
 export async function deleteContribution(id: string) {
   const supabase = await createClient()
-  const { error } = await supabase.from('goal_contributions').delete().eq('id', id)
+  const { data: deleted, error } = await supabase
+    .from('goal_contributions')
+    .delete()
+    .eq('id', id)
+    .select('id')
   if (error) return { error: error.message }
+  // La RLS convierte un id ajeno o inexistente en «0 filas», no en error.
+  if (!deleted?.length) return { error: 'No se ha encontrado: puede que ya estuviera borrado' }
   revalidateGoals()
   return { success: true }
 }

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { positiveAmount } from './money-schemas'
 import { isValidIsin, normalizeIsin } from '@/lib/investments'
 
 export const holdingSchema = z.discriminatedUnion('assetType', [
@@ -23,8 +24,8 @@ export type HoldingInput = z.input<typeof holdingSchema>
 export const operationSchema = z.object({
   kind: z.enum(['buy', 'sell']),
   operationDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Selecciona una fecha'),
-  units: z.number().positive('Indica las participaciones (mayor que 0)'),
-  amount: z.number().positive('El importe debe ser mayor que 0'),
+  units: z.number().finite('Participaciones no válidas').positive('Indica las participaciones (mayor que 0)'),
+  amount: positiveAmount,
   /** Compra pagada con (o venta cobrada en) el efectivo de la cuenta. */
   affectsCash: z.boolean(),
 })

@@ -80,6 +80,8 @@ export async function GET(request: NextRequest) {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'Content-Disposition': 'attachment; filename="movimientos.xlsx"',
+        // Datos privados: ni el navegador ni un proxy intermedio deben guardarlos (auditoría F-06).
+        'Cache-Control': 'private, no-store, max-age=0',
       },
     })
   }
@@ -100,6 +102,8 @@ export async function GET(request: NextRequest) {
     headers: {
       'Content-Type': 'application/pdf',
       'Content-Disposition': 'attachment; filename="movimientos.pdf"',
+      // Datos privados: ni el navegador ni un proxy intermedio deben guardarlos (auditoría F-06).
+      'Cache-Control': 'private, no-store, max-age=0',
     },
   })
 }

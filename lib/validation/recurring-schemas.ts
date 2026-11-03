@@ -1,9 +1,10 @@
 import { z } from 'zod'
+import { positiveAmount } from './money-schemas'
 
 export const recurringSchema = z.object({
   accountId: z.string().uuid('Selecciona una cuenta'),
   categoryId: z.string().uuid('Selecciona una categoría'),
-  amount: z.number().positive('El importe debe ser mayor que 0'),
+  amount: positiveAmount,
   frequency: z.enum(['weekly', 'monthly', 'yearly']),
   nextRunDate: z
     .string()
@@ -23,7 +24,7 @@ export const recurringTransferSchema = z
   .object({
     fromAccountId: z.string().uuid('Selecciona la cuenta de origen'),
     toAccountId: z.string().uuid('Selecciona la cuenta de destino'),
-    amount: z.number().positive('El importe debe ser mayor que 0'),
+    amount: positiveAmount,
     frequency: z.enum(['weekly', 'monthly', 'yearly']),
     nextRunDate: z
       .string()
