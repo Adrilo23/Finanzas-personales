@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { buildTransferRows, isHiddenTransferLeg, pairTransferLegs } from './transfers'
+import { buildTransferRows, isHiddenTransferLeg, pairTransferLegs, transferTargets } from './transfers'
 import { sumByType } from './stats'
 import { aggregateMonthly } from './reports'
 
@@ -90,5 +90,21 @@ describe('isHiddenTransferLeg', () => {
 
   test('filtrando por cuenta se ven todas las patas de esa cuenta', () => {
     expect(isHiddenTransferLeg(inn, true)).toBe(false)
+  })
+})
+
+describe('transferTargets', () => {
+  const accounts = [
+    { id: 'bbva', name: 'BBVA', type: 'checking' },
+    { id: 'cash', name: 'Efectivo', type: 'cash' },
+    { id: 'myinv', name: 'My Investor', type: 'investment' },
+  ]
+
+  test('excluye la cuenta de origen y pone primero las de inversión', () => {
+    expect(transferTargets(accounts, 'bbva').map((a) => a.id)).toEqual(['myinv', 'cash'])
+  })
+
+  test('sin cuentas de inversión, mantiene el orden', () => {
+    expect(transferTargets(accounts.slice(0, 2), 'cash').map((a) => a.id)).toEqual(['bbva'])
   })
 })

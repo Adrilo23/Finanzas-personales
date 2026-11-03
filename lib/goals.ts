@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { addMonths, differenceInCalendarMonths, parseISO, startOfDay, subDays } from 'date-fns'
+import { addMonths, differenceInCalendarMonths, format, parseISO, startOfDay, subDays } from 'date-fns'
 
 export type GoalStatus = 'completed' | 'on_track' | 'behind' | 'overdue' | 'no_deadline'
 
@@ -10,6 +10,17 @@ export type GoalRow = {
   target_cents: number
   /** 'yyyy-MM-dd' o null. */
   target_date: string | null
+  /** Cuenta vinculada: si existe, el progreso sale de su saldo y no de las aportaciones. */
+  account_id?: string | null
+}
+
+/** Datos de la cuenta vinculada a un objetivo. */
+export type LinkedAccount = {
+  name: string
+  /** Saldo actual (efectivo + valor de los activos), de la vista account_balances. */
+  balanceCents: number
+  /** Movimientos de la cuenta (traspasos incluidos) de, al menos, la ventana del ritmo. */
+  flows: { amount_cents: number; transaction_date: string }[]
 }
 
 export type ContributionRow = {
@@ -37,33 +48,43 @@ export type GoalProgress = {
   paceCents: number
   /** Fecha estimada de cumplimiento al ritmo actual; null si no hay ritmo positivo. */
   projectedDate: Date | null
+  /** Cuenta vinculada (null si el progreso sale de aportaciones manuales). */
+  account: { id: string; name: string } | null
 }
 
 /** Ventana con la que se mide el ritmo de ahorro. */
 export const PACE_WINDOW_DAYS = 90
 
 /**
- * Progreso de un objetivo a partir de sus aportaciones. Parte pura (sin base de datos)
- * para poder testearla. Todo en céntimos enteros.
+ * Progreso de un objetivo. Parte pura (sin base de datos) para poder testearla. Todo en
+ * céntimos enteros. Sin cuenta vinculada, lo ahorrado es la suma de las aportaciones;
+ * con ella (`linked`), el saldo de la cuenta, y el ritmo sale de sus movimientos netos
+ * (las revalorizaciones de una cuenta de inversión no cuentan como ritmo de ahorro).
  */
 export function computeGoalProgress(
   goal: GoalRow,
   contributions: ContributionRow[],
-  now: Date
+  now: Date,
+  linked?: LinkedAccount | null
 ): GoalProgress {
-  const mine = contributions.filter((c) => c.goal_id === goal.id)
-  const savedCents = Math.max(
-    mine.reduce((sum, c) => sum + c.amount_cents, 0),
-    0
-  )
+  const today = startOfDay(now)
+  const windowStart = subDays(today, PACE_WINDOW_DAYS)
+
+  // Mismo cálculo para las dos fuentes: total y movimientos fechados.
+  const entries = linked
+    ? linked.flows.map((f) => ({ cents: f.amount_cents, date: f.transaction_date }))
+    : contributions
+        .filter((c) => c.goal_id === goal.id)
+        .map((c) => ({ cents: c.amount_cents, date: c.contribution_date }))
+  const total = linked ? linked.balanceCents : entries.reduce((sum, e) => sum + e.cents, 0)
+
+  const savedCents = Math.max(total, 0)
   const remainingCents = Math.max(goal.target_cents - savedCents, 0)
   const ratio = savedCents / goal.target_cents
 
-  const today = startOfDay(now)
-  const windowStart = subDays(today, PACE_WINDOW_DAYS)
-  const windowNet = mine
-    .filter((c) => parseISO(c.contribution_date) > windowStart)
-    .reduce((sum, c) => sum + c.amount_cents, 0)
+  const windowNet = entries
+    .filter((e) => parseISO(e.date) > windowStart)
+    .reduce((sum, e) => sum + e.cents, 0)
   const paceCents = Math.round((windowNet / PACE_WINDOW_DAYS) * 30.4375)
 
   const projectedDate =
@@ -101,15 +122,57 @@ export function computeGoalProgress(
     requiredPerMonthCents,
     paceCents,
     projectedDate,
+    account: linked && goal.account_id ? { id: goal.account_id, name: linked.name } : null,
   }
 }
 
+/**
+ * Si la cuenta vinculada se borró (o no llegó), el objetivo vuelve a las aportaciones
+ * manuales, que se conservan.
+ */
 export function computeGoals(
   goals: GoalRow[],
   contributions: ContributionRow[],
-  now: Date
+  now: Date,
+  accounts: Map<string, LinkedAccount> = new Map()
 ): GoalProgress[] {
-  return goals.map((g) => computeGoalProgress(g, contributions, now))
+  return goals.map((g) =>
+    computeGoalProgress(g, contributions, now, g.account_id ? accounts.get(g.account_id) : null)
+  )
+}
+
+type SupabaseServer = Awaited<ReturnType<typeof createClient>>
+
+/** Saldo y movimientos recientes de las cuentas vinculadas a algún objetivo. */
+export async function getLinkedAccounts(
+  supabase: SupabaseServer,
+  goals: GoalRow[],
+  now: Date
+): Promise<Map<string, LinkedAccount>> {
+  const ids = [...new Set(goals.map((g) => g.account_id).filter((id): id is string => !!id))]
+  const map = new Map<string, LinkedAccount>()
+  if (ids.length === 0) return map
+
+  const since = format(subDays(startOfDay(now), PACE_WINDOW_DAYS), 'yyyy-MM-dd')
+  const [{ data: balances }, { data: flows }] = await Promise.all([
+    supabase.from('account_balances').select('id, name, balance_cents').in('id', ids),
+    supabase
+      .from('transactions')
+      .select('account_id, amount_cents, transaction_date')
+      .is('deleted_at', null)
+      .in('account_id', ids)
+      .gte('transaction_date', since),
+  ])
+
+  for (const b of balances ?? []) {
+    if (!b.id) continue
+    map.set(b.id, {
+      name: b.name ?? 'Cuenta',
+      balanceCents: b.balance_cents ?? 0,
+      flows: (flows ?? []).filter((f) => f.account_id === b.id),
+    })
+  }
+  return map
 }
 
 /** Objetivos del usuario con su progreso (consulta y delega en computeGoals). */
@@ -118,9 +181,10 @@ export async function getGoals(now = new Date()): Promise<GoalProgress[]> {
   const [{ data: goals }, { data: contributions }] = await Promise.all([
     supabase
       .from('savings_goals')
-      .select('id, name, icon, target_cents, target_date')
+      .select('id, name, icon, target_cents, target_date, account_id')
       .order('created_at', { ascending: true }),
     supabase.from('goal_contributions').select('goal_id, amount_cents, contribution_date'),
   ])
-  return computeGoals(goals ?? [], contributions ?? [], now)
+  const accounts = await getLinkedAccounts(supabase, goals ?? [], now)
+  return computeGoals(goals ?? [], contributions ?? [], now, accounts)
 }

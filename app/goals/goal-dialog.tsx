@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { AmountInput } from '@/components/ui/amount-input'
+import { NativeSelect } from '@/components/ui/native-select'
 import { Field, FieldError, FieldHint, FormError } from '@/components/ui/field'
 import {
   Dialog,
@@ -29,14 +30,19 @@ export type GoalInitial = {
   icon: string | null
   targetCents: number
   targetDate: string | null
+  accountId: string | null
 }
+
+export type GoalAccountOption = { id: string; name: string }
 
 /** Crear o editar un objetivo de ahorro. Con `initial` edita; sin él, crea. */
 export function GoalDialog({
   initial,
+  accounts,
   trigger,
 }: {
   initial?: GoalInitial
+  accounts: GoalAccountOption[]
   trigger?: React.ReactNode
 }) {
   const [open, setOpen] = useState(false)
@@ -47,6 +53,7 @@ export function GoalDialog({
     icon: initial?.icon ?? '',
     target: initial ? centsToEuros(initial.targetCents) : undefined,
     targetDate: initial?.targetDate ?? '',
+    accountId: initial?.accountId ?? '',
   })
 
   const {
@@ -64,6 +71,7 @@ export function GoalDialog({
     formData.set('icon', data.icon ?? '')
     formData.set('target', String(data.target))
     formData.set('targetDate', data.targetDate)
+    formData.set('accountId', data.accountId)
 
     const result = await saveGoal(formData)
     if (result?.error) {
@@ -94,7 +102,8 @@ export function GoalDialog({
         <DialogHeader>
           <DialogTitle>{initial ? 'Editar objetivo' : 'Nuevo objetivo de ahorro'}</DialogTitle>
           <DialogDescription>
-            Ponle nombre, una cantidad y, si quieres, una fecha. Las aportaciones las registras tú.
+            Ponle nombre, una cantidad y, si quieres, una fecha. El progreso sale de las
+            aportaciones que registres o del saldo de una cuenta.
           </DialogDescription>
         </DialogHeader>
 
@@ -139,6 +148,24 @@ export function GoalDialog({
             <FieldHint>Con fecha te decimos cuánto aportar al mes y si vas a tiempo.</FieldHint>
             <FieldError>{errors.targetDate?.message}</FieldError>
           </Field>
+
+          {accounts.length > 0 && (
+            <Field>
+              <Label htmlFor="goal-account">Cuenta vinculada (opcional)</Label>
+              <NativeSelect id="goal-account" {...register('accountId')}>
+                <option value="">Ninguna: registro las aportaciones a mano</option>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </NativeSelect>
+              <FieldHint>
+                Si apartas el dinero en una cuenta propia, el progreso será su saldo y no hará
+                falta anotar aportaciones.
+              </FieldHint>
+            </Field>
+          )}
 
           <FormError>{serverError}</FormError>
 

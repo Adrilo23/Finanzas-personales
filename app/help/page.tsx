@@ -60,6 +60,27 @@ const FAQ: { id: string; question: string; answer: React.ReactNode }[] = [
     ),
   },
   {
+    id: 'convertir-inversion',
+    question: 'Registré aportaciones a mi bróker como «inversión». ¿Debo cambiarlas?',
+    answer: (
+      <>
+        <p>
+          Solo si ese bróker lo llevas en la app como cuenta de inversión. En ese caso, en{' '}
+          <Link href="/transactions" className={link}>
+            Movimientos
+          </Link>{' '}
+          esos movimientos tienen un botón de flechas, «Convertir en traspaso»: eliges la cuenta
+          de destino y pasan a ser un traspaso, que mueve el dinero entre tus cuentas sin contar
+          como inversión.
+        </p>
+        <p>
+          Si las compras de fondos de esa cuenta las registraste como «sin efectivo», el
+          efectivo de la cuenta saldrá de más: vuelve a registrarlas descontando del efectivo.
+        </p>
+      </>
+    ),
+  },
+  {
     id: 'recurrentes',
     question: '¿Cómo funcionan los movimientos recurrentes?',
     answer: (
@@ -139,8 +160,9 @@ const FAQ: { id: string; question: string; answer: React.ReactNode }[] = [
           objetivo
         </Link>{' '}
         son una anotación tuya («este mes he apartado 100 € para el viaje»), no un movimiento. El
-        dinero sigue en la cuenta donde esté, y así no se cuenta dos veces. La app te dice cuánto
-        apartar al mes para llegar a la fecha y si vas a tiempo.
+        dinero sigue en la cuenta donde esté, y así no se cuenta dos veces. Si guardas ese dinero
+        en una cuenta propia, vincula el objetivo a ella: el progreso será su saldo y no tendrás
+        que anotar nada.
       </p>
     ),
   },

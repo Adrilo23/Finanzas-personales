@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
-import { PencilIcon, TargetIcon } from 'lucide-react'
+import { LinkIcon, PencilIcon, TargetIcon } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { createClient } from '@/lib/supabase/server'
-import { computeGoals } from '@/lib/goals'
+import { computeGoals, getLinkedAccounts } from '@/lib/goals'
 import { formatShortDate } from '@/lib/format'
 import { PageHeader, PageShell } from '@/components/page-header'
 import { EmptyState } from '@/components/empty-state'
@@ -21,27 +21,30 @@ export default async function GoalsPage() {
   const supabase = await createClient()
   const now = new Date()
 
-  const [{ data: goalRows }, { data: contributionRows }] = await Promise.all([
+  const [{ data: goalRows }, { data: contributionRows }, { data: accountRows }] = await Promise.all([
     supabase
       .from('savings_goals')
-      .select('id, name, icon, target_cents, target_date')
+      .select('id, name, icon, target_cents, target_date, account_id')
       .order('created_at', { ascending: true }),
     supabase
       .from('goal_contributions')
       .select('id, goal_id, amount_cents, contribution_date, note')
       .order('contribution_date', { ascending: false })
       .order('created_at', { ascending: false }),
+    supabase.from('accounts').select('id, name').order('name'),
   ])
 
   const contributions = contributionRows ?? []
-  const goals = computeGoals(goalRows ?? [], contributions, now)
+  const accounts = accountRows ?? []
+  const linked = await getLinkedAccounts(supabase, goalRows ?? [], now)
+  const goals = computeGoals(goalRows ?? [], contributions, now, linked)
 
   // Primero los que siguen en marcha; los cumplidos al final.
   const sorted = [...goals].sort(
     (a, b) => Number(a.status === 'completed') - Number(b.status === 'completed')
   )
 
-  const newDialog = <GoalDialog />
+  const newDialog = <GoalDialog accounts={accounts} />
 
   return (
     <PageShell>
@@ -90,7 +93,9 @@ export default async function GoalsPage() {
                         icon: g.icon,
                         targetCents: g.targetCents,
                         targetDate: g.targetDate,
+                        accountId: g.account?.id ?? null,
                       }}
+                      accounts={accounts}
                       trigger={
                         <Button
                           variant="ghost"
@@ -148,6 +153,8 @@ export default async function GoalsPage() {
                           {g.projectedDate &&
                             ` · lo alcanzarías en ${format(g.projectedDate, 'MMMM yyyy', { locale: es })}`}
                         </>
+                      ) : g.account ? (
+                        'La cuenta no ha recibido dinero en los últimos 3 meses'
                       ) : (
                         'Sin aportaciones en los últimos 3 meses'
                       )}
@@ -155,11 +162,18 @@ export default async function GoalsPage() {
                   )}
                 </div>
 
-                <div className="flex items-center justify-between gap-2">
-                  <ContributionDialog goalId={g.id} name={g.name} />
-                </div>
+                {g.account ? (
+                  <p className="flex items-center gap-1.5 text-[0.8125rem] text-muted-foreground">
+                    <LinkIcon aria-hidden className="size-3.5" />
+                    Sigue el saldo de <span className="font-medium text-foreground">{g.account.name}</span>
+                  </p>
+                ) : (
+                  <div className="flex items-center justify-between gap-2">
+                    <ContributionDialog goalId={g.id} name={g.name} />
+                  </div>
+                )}
 
-                {history.length > 0 && (
+                {!g.account && history.length > 0 && (
                   <details className="group -mx-1">
                     <summary className="cursor-pointer list-none rounded-lg px-1 py-1 text-[0.8125rem] font-medium text-muted-foreground outline-none select-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/40 [&::-webkit-details-marker]:hidden">
                       Historial ({history.length})

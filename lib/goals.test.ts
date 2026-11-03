@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computeGoalProgress, type ContributionRow, type GoalRow } from './goals'
+import { computeGoalProgress, computeGoals, type ContributionRow, type GoalRow } from './goals'
 
 const now = new Date(2026, 9, 6) // 6 oct 2026
 const goal: GoalRow = {
@@ -78,5 +78,42 @@ describe('computeGoalProgress', () => {
   it('fecha este mismo mes: reparte en un solo mes', () => {
     const p = computeGoalProgress({ ...goal, target_date: '2026-10-25' }, [], now)
     expect(p.requiredPerMonthCents).toBe(120000)
+  })
+})
+
+describe('objetivo vinculado a una cuenta', () => {
+  const linkedGoal: GoalRow = { ...goal, account_id: 'acc1' }
+  const account = {
+    name: 'Cuenta ahorro',
+    balanceCents: 60000,
+    flows: [
+      { amount_cents: 30000, transaction_date: '2026-09-01' }, // traspaso de entrada
+      { amount_cents: -6000, transaction_date: '2026-09-20' }, // salida
+      { amount_cents: 50000, transaction_date: '2026-01-15' }, // fuera de la ventana
+    ],
+  }
+
+  it('lo ahorrado es el saldo de la cuenta; las aportaciones manuales no cuentan', () => {
+    const p = computeGoalProgress(linkedGoal, [c(99900, '2026-09-01')], now, account)
+    expect(p.savedCents).toBe(60000)
+    expect(p.remainingCents).toBe(60000)
+    expect(p.account).toEqual({ id: 'acc1', name: 'Cuenta ahorro' })
+  })
+
+  it('el ritmo sale de los movimientos netos de los últimos 90 días', () => {
+    const p = computeGoalProgress(linkedGoal, [], now, account)
+    // (30000 − 6000) / 90 días × 30,4375
+    expect(p.paceCents).toBe(Math.round((24000 / 90) * 30.4375))
+  })
+
+  it('saldo negativo cuenta como 0 ahorrado', () => {
+    const p = computeGoalProgress(linkedGoal, [], now, { ...account, balanceCents: -500 })
+    expect(p.savedCents).toBe(0)
+  })
+
+  it('si la cuenta vinculada ya no existe, vuelve a las aportaciones manuales', () => {
+    const [p] = computeGoals([linkedGoal], [c(10000, '2026-09-01')], now, new Map())
+    expect(p.savedCents).toBe(10000)
+    expect(p.account).toBeNull()
   })
 })

@@ -10,6 +10,7 @@ import { isHiddenTransferLeg, pairTransferLegs } from '@/lib/transfers'
 import { Button } from '@/components/ui/button'
 import { NewTransactionDialog } from './new-transaction-dialog'
 import { DeleteTransactionButton } from './delete-transaction-button'
+import { ConvertTransferDialog } from './convert-transfer-dialog'
 import { TransactionFilters } from './transaction-filters'
 import { AttachmentDialog } from './attachment-dialog'
 
@@ -77,7 +78,7 @@ export default async function TransactionsPage({
 
   const [{ data: transactions }, { data: accounts }, { data: categories }] = await Promise.all([
     query,
-    supabase.from('accounts').select('id, name').order('created_at', { ascending: true }),
+    supabase.from('accounts').select('id, name, type').order('created_at', { ascending: true }),
     supabase.from('categories').select('id, name, type').order('name', { ascending: true }),
   ])
 
@@ -321,6 +322,17 @@ export default async function TransactionsPage({
                         }
                       />
                       <div className="flex items-center">
+                        {/* Inversión anterior a los traspasos: se puede convertir en traspaso. */}
+                        {category?.type === 'investment' && t.amount_cents < 0 && (
+                          <ConvertTransferDialog
+                            transactionId={t.id}
+                            fromAccountId={t.account_id}
+                            fromAccountName={first(t.accounts)?.name ?? null}
+                            amountCents={t.amount_cents}
+                            label={t.description || category.name}
+                            accounts={accounts ?? []}
+                          />
+                        )}
                         <AttachmentDialog transactionId={t.id} />
                         <DeleteTransactionButton id={t.id} />
                       </div>

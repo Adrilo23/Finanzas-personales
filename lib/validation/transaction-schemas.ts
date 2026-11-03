@@ -24,3 +24,9 @@ export const transferSchema = z
   })
 
 export type TransferInput = z.infer<typeof transferSchema>
+
+/** Convertir un movimiento de inversión antiguo en traspaso hacia una cuenta. */
+export const convertToTransferSchema = z.object({
+  transactionId: z.string().uuid(),
+  toAccountId: z.string().uuid('Selecciona la cuenta de destino'),
+})

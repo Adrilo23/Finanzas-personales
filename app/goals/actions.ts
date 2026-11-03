@@ -17,6 +17,7 @@ export async function saveGoal(formData: FormData) {
     icon: formData.get('icon') || undefined,
     target: Number(formData.get('target')),
     targetDate: formData.get('targetDate') ?? '',
+    accountId: formData.get('accountId') ?? '',
   })
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
@@ -31,6 +32,8 @@ export async function saveGoal(formData: FormData) {
     icon: parsed.data.icon || null,
     target_cents: eurosToCents(parsed.data.target),
     target_date: parsed.data.targetDate || null,
+    // La RLS comprueba que la cuenta vinculada sea del usuario.
+    account_id: parsed.data.accountId || null,
   }
   const id = formData.get('id')
 
@@ -70,6 +73,16 @@ export async function addContribution(formData: FormData) {
   if (!user) return { error: 'No autenticado' }
 
   const cents = eurosToCents(parsed.data.amount)
+
+  const { data: goal } = await supabase
+    .from('savings_goals')
+    .select('account_id')
+    .eq('id', parsed.data.goalId)
+    .single()
+  if (!goal) return { error: 'El objetivo no existe' }
+  if (goal.account_id) {
+    return { error: 'Este objetivo sigue el saldo de una cuenta: no admite aportaciones manuales' }
+  }
 
   if (parsed.data.kind === 'withdraw') {
     // No se puede retirar más de lo ahorrado.

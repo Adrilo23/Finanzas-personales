@@ -10,6 +10,7 @@ import { Amount } from '@/components/amount'
 import { BudgetBar, BudgetStatusBadge } from '@/components/budget-progress'
 import { buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { SendReportButton } from './send-report-button'
 
 export const metadata: Metadata = { title: 'Informe mensual' }
 
@@ -67,6 +68,7 @@ export default async function MonthlyReportPage({
                 <ChevronRightIcon />
               </span>
             )}
+            {report.hasData && <SendReportButton month={key} />}
             <a
               href={`/reports/monthly/export?month=${key}`}
               className={buttonVariants({ variant: 'default' })}

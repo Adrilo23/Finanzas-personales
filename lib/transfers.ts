@@ -87,3 +87,16 @@ export function isHiddenTransferLeg(
 ): boolean {
   return !filteringByAccount && row.transfer_id !== null && row.amount_cents > 0
 }
+
+export type TransferTarget = { id: string; name: string; type: string | null }
+
+/**
+ * Cuentas a las que se puede convertir en traspaso un movimiento de `fromAccountId`:
+ * todas menos la de origen, con las de inversión primero (es el caso habitual: una
+ * aportación al bróker registrada como «inversión» antes de existir los traspasos).
+ */
+export function transferTargets(accounts: TransferTarget[], fromAccountId: string): TransferTarget[] {
+  return accounts
+    .filter((a) => a.id !== fromAccountId)
+    .sort((a, b) => Number(b.type === 'investment') - Number(a.type === 'investment'))
+}
