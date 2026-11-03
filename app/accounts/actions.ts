@@ -103,11 +103,17 @@ export async function updateAccount(id: string, formData: FormData) {
 export async function deleteAccount(id: string) {
   const supabase = await createClient()
   // Desde la migración 0004 sus movimientos (y adjuntos) se borran en cascada.
-  const { error } = await supabase.from('accounts').delete().eq('id', id)
+  const { data: deleted, error } = await supabase
+    .from('accounts')
+    .delete()
+    .eq('id', id)
+    .select('id')
 
   if (error) {
     return { error: error.message }
   }
+  // La RLS convierte un id ajeno o inexistente en «0 filas», no en error.
+  if (!deleted?.length) return { error: 'No se ha encontrado: puede que ya estuviera borrado' }
 
   revalidatePath('/accounts')
   revalidatePath('/')

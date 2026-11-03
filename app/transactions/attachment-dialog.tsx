@@ -2,8 +2,14 @@
 
 import { useRef, useState } from 'react'
 import { FileTextIcon, ImageIcon, PaperclipIcon, Trash2Icon, UploadIcon } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
-import { createAttachment, deleteAttachment } from './attachments-actions'
+import {
+  createAttachment,
+  deleteAttachment,
+  getAttachmentUrl,
+  listAttachments,
+  prepareAttachmentUpload,
+} from './attachments-actions'
+import { ATTACHMENT_MAX_MB, ATTACHMENT_TYPES, validateAttachmentFile } from '@/lib/attachments'
 import { Button } from '@/components/ui/button'
 import { FormError } from '@/components/ui/field'
 import {
@@ -16,10 +22,9 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 
-type Attachment = { id: string; file_name: string; storage_path: string }
+type Attachment = { id: string; file_name: string }
 
-const MAX_SIZE_MB = 10
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf']
+const MAX_SIZE_MB = ATTACHMENT_MAX_MB
 
 export function AttachmentDialog({ transactionId }: { transactionId: string }) {
   const [open, setOpen] = useState(false)
@@ -31,16 +36,9 @@ export function AttachmentDialog({ transactionId }: { transactionId: string }) {
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const supabase = createClient()
-
   const loadAttachments = async () => {
     setLoading(true)
-    const { data } = await supabase
-      .from('attachments')
-      .select('id, file_name, storage_path')
-      .eq('transaction_id', transactionId)
-      .order('uploaded_at', { ascending: false })
-    setAttachments(data ?? [])
+    setAttachments(await listAttachments(transactionId))
     setLoading(false)
   }
 
@@ -53,54 +51,63 @@ export function AttachmentDialog({ transactionId }: { transactionId: string }) {
 
   const handleUpload = async (file: File) => {
     setError(null)
-
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      setError('Solo se admiten imágenes (JPG, PNG, WEBP) o PDF.')
-      return
-    }
-    if (file.size > MAX_SIZE_MB * 1024 * 1024) {
-      setError(`El archivo no puede superar ${MAX_SIZE_MB} MB.`)
+    const invalid = validateAttachmentFile(file)
+    if (invalid) {
+      setError(invalid)
       return
     }
 
     setUploading(true)
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    try {
+      // El servidor comprueba el movimiento y da una URL firmada para una ruta propia:
+      // el navegador no usa la sesión de Supabase (la cookie es HttpOnly).
+      const prepared = await prepareAttachmentUpload(transactionId, {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+      })
+      if ('error' in prepared) {
+        setError(prepared.error ?? 'No se ha podido subir el archivo')
+        return
+      }
 
-    if (!user) {
-      setError('Tu sesión ha caducado. Vuelve a iniciar sesión.')
+      // Mismo formato que uploadToSignedUrl de supabase-js. La anon key es pública.
+      const body = new FormData()
+      body.append('cacheControl', '3600')
+      body.append('', file)
+      const res = await fetch(prepared.signedUrl, {
+        method: 'PUT',
+        headers: { 'x-upsert': 'false', apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! },
+        body,
+      })
+      if (!res.ok) {
+        setError('No se ha podido subir el archivo')
+        return
+      }
+
+      const result = await createAttachment(transactionId, prepared.path, file.name)
+      if (result?.error) setError(result.error)
+      else await loadAttachments()
+    } finally {
       setUploading(false)
-      return
     }
+  }
 
-    // Convención de ruta: {user_id}/{transaction_id}/... — es lo que
-    // comprueban las políticas de Storage para dar acceso solo a lo propio.
-    const path = `${user.id}/${transactionId}/${crypto.randomUUID()}-${file.name}`
-    const { error: uploadError } = await supabase.storage.from('attachments').upload(path, file)
-
-    if (uploadError) {
-      setError(uploadError.message)
-      setUploading(false)
-      return
-    }
-
-    const result = await createAttachment(transactionId, path, file.name)
-    if (result?.error) {
-      setError(result.error)
+  const handleView = async (id: string) => {
+    // Se abre la pestaña antes de esperar al servidor para que no la bloquee el navegador.
+    const tab = window.open('', '_blank')
+    const result = await getAttachmentUrl(id)
+    if ('url' in result && result.url) {
+      if (tab) tab.location.href = result.url
+      else window.open(result.url, '_blank')
     } else {
-      await loadAttachments()
+      tab?.close()
+      setError(('error' in result && result.error) || 'No se ha podido abrir el adjunto')
     }
-    setUploading(false)
   }
 
-  const handleView = async (storagePath: string) => {
-    const { data } = await supabase.storage.from('attachments').createSignedUrl(storagePath, 60)
-    if (data?.signedUrl) window.open(data.signedUrl, '_blank')
-  }
-
-  const handleDelete = async (id: string, storagePath: string) => {
-    const result = await deleteAttachment(id, storagePath)
+  const handleDelete = async (id: string) => {
+    const result = await deleteAttachment(id)
     setPendingDelete(null)
     if (result?.error) setError(result.error)
     await loadAttachments()
@@ -158,7 +165,7 @@ export function AttachmentDialog({ transactionId }: { transactionId: string }) {
           <input
             ref={inputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp,application/pdf"
+            accept={ATTACHMENT_TYPES.join(",")}
             className="sr-only"
             tabIndex={-1}
             aria-hidden
@@ -190,7 +197,7 @@ export function AttachmentDialog({ transactionId }: { transactionId: string }) {
                     <Icon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
                     <button
                       type="button"
-                      onClick={() => handleView(a.storage_path)}
+                      onClick={() => handleView(a.id)}
                       className="min-w-0 flex-1 truncate rounded text-left text-sm font-medium underline-offset-4 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/40"
                     >
                       {a.file_name}
@@ -207,7 +214,7 @@ export function AttachmentDialog({ transactionId }: { transactionId: string }) {
                         <Button
                           variant="destructive"
                           size="sm"
-                          onClick={() => handleDelete(a.id, a.storage_path)}
+                          onClick={() => handleDelete(a.id)}
                         >
                           Eliminar
                         </Button>

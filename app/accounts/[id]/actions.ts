@@ -6,6 +6,7 @@ import { eurosToCents } from '@/lib/money'
 import { roundUnits } from '@/lib/investments'
 import { storePriceHistory, yahooProvider } from '@/lib/prices'
 import { revalidatePath } from 'next/cache'
+import { positiveAmount } from '@/lib/validation/money-schemas'
 
 function revalidateInvestmentViews(accountId: string) {
   revalidatePath(`/accounts/${accountId}`)
@@ -93,10 +94,16 @@ export async function addHolding(accountId: string, formData: FormData) {
 
 export async function deleteHolding(id: string, accountId: string) {
   const supabase = await createClient()
-  const { error } = await supabase.from('holdings').delete().eq('id', id)
+  const { data: deleted, error } = await supabase
+    .from('holdings')
+    .delete()
+    .eq('id', id)
+    .select('id')
   if (error) {
     return { error: error.message }
   }
+  // La RLS convierte un id ajeno o inexistente en «0 filas», no en error.
+  if (!deleted?.length) return { error: 'No se ha encontrado: puede que ya estuviera borrado' }
   revalidateInvestmentViews(accountId)
   return { success: true }
 }
@@ -155,10 +162,16 @@ export async function addOperation(holdingId: string, formData: FormData) {
 
 export async function deleteOperation(id: string, accountId: string) {
   const supabase = await createClient()
-  const { error } = await supabase.from('holding_operations').delete().eq('id', id)
+  const { data: deleted, error } = await supabase
+    .from('holding_operations')
+    .delete()
+    .eq('id', id)
+    .select('id')
   if (error) {
     return { error: error.message }
   }
+  // La RLS convierte un id ajeno o inexistente en «0 filas», no en error.
+  if (!deleted?.length) return { error: 'No se ha encontrado: puede que ya estuviera borrado' }
   revalidateInvestmentViews(accountId)
   return { success: true }
 }
@@ -166,13 +179,14 @@ export async function deleteOperation(id: string, accountId: string) {
 /** Confirma una compra pendiente (de un plan de aportación) con los datos reales del bróker. */
 export async function confirmOperation(id: string, accountId: string, formData: FormData) {
   const units = roundUnits(Number(formData.get('units')))
-  const amount = Number(formData.get('amount'))
-  if (!(units > 0)) {
+  if (!(units > 0) || !Number.isFinite(units)) {
     return { error: 'Indica las participaciones (mayor que 0)' }
   }
-  if (!(amount > 0)) {
-    return { error: 'El importe debe ser mayor que 0' }
+  const parsedAmount = positiveAmount.safeParse(Number(formData.get('amount')))
+  if (!parsedAmount.success) {
+    return { error: parsedAmount.error.issues[0].message }
   }
+  const amount = parsedAmount.data
 
   const supabase = await createClient()
   const { data, error } = await supabase

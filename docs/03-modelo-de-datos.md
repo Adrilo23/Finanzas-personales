@@ -205,6 +205,12 @@ categories 1───1 budgets (opcional)
 accounts 1───N holdings 1───N holding_operations
 ```
 
+### Seguridad en la base de datos — `0014`
+- **Propiedad de las FK en RLS:** las políticas de insert/update de `categories`, `recurring_rules`, `transactions`, `attachments`, `budgets`, `holdings`, `holding_operations`, `recurring_allocations` y `goal_contributions` exigen, además de `user_id = auth.uid()`, que cada FK apunte a una fila del usuario. Funciones auxiliares `owns_account`, `owns_category`, `owns_transaction`, `owns_transaction_path` (texto, para Storage), `owns_recurring_rule` y `owns_holding` (`security invoker`, `stable`).
+- **Límites de importe** (`not valid`: aplican a lo nuevo y a lo editado): `transactions.amount_cents` y `recurring_rules.amount_cents` ≠ 0 y |x| ≤ 100.000.000.000 céntimos (1.000 millones de €); el mismo tope en saldos iniciales, presupuestos, operaciones, repartos, objetivos y aportaciones.
+- **Bucket `attachments`:** `allowed_mime_types` = JPG/PNG/WEBP/PDF, `file_size_limit` = 10 MB; la política de insert exige además que la segunda carpeta sea un movimiento propio.
+- **login_attempts**: `key` (`pair:` o `ip:` + sha256), `failures`, `window_start`, `blocked_until`. RLS sin políticas y sin permisos para `anon`/`authenticated`: solo se usa desde `login_throttle_status(p_keys)` y `login_throttle_fail(p_keys)` (`security definer`). No hay función para reiniciar el contador, a propósito.
+
 ## Vistas y cálculos derivados
 
 - **`account_balances`** (`0002`, recreada en `0007` y `0008`, `security_invoker`): `cash_cents` = saldo inicial + movimientos no borrados − compras + ventas (las que tienen `affects_cash`); `balance_cents` = `cash_cents` + `market_value_cents` (valor de mercado de sus activos). Las columnas de la vista salen anulables en los tipos generados.

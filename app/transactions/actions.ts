@@ -235,13 +235,15 @@ export async function deleteTransaction(id: string) {
 
   // Soft delete: mantenemos la fila para no perder trazabilidad de saldos históricos.
   const deletion = supabase.from('transactions').update({ deleted_at: new Date().toISOString() })
-  const { error } = row?.transfer_id
-    ? await deletion.eq('transfer_id', row.transfer_id)
-    : await deletion.eq('id', id)
+  const { data: deleted, error } = row?.transfer_id
+    ? await deletion.eq('transfer_id', row.transfer_id).is('deleted_at', null).select('id')
+    : await deletion.eq('id', id).is('deleted_at', null).select('id')
 
   if (error) {
     return { error: error.message }
   }
+  // La RLS convierte un id ajeno o inexistente en «0 filas», no en error.
+  if (!deleted?.length) return { error: 'No se ha encontrado: puede que ya estuviera borrado' }
 
   revalidateMoneyViews()
   return { success: true }

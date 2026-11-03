@@ -110,11 +110,17 @@ export async function updateCategory(id: string, formData: FormData) {
 
 export async function deleteCategory(id: string) {
   const supabase = await createClient()
-  const { error } = await supabase.from('categories').delete().eq('id', id)
+  const { data: deleted, error } = await supabase
+    .from('categories')
+    .delete()
+    .eq('id', id)
+    .select('id')
 
   if (error) {
     return { error: error.message }
   }
+  // La RLS convierte un id ajeno o inexistente en «0 filas», no en error.
+  if (!deleted?.length) return { error: 'No se ha encontrado: puede que ya estuviera borrado' }
 
   revalidatePath('/categories')
   return { success: true }

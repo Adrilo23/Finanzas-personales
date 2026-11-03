@@ -1,10 +1,11 @@
 import { z } from 'zod'
+import { nonNegativeAmount } from './money-schemas'
 
 export const accountSchema = z.object({
   name: z.string().min(1, 'El nombre es obligatorio').max(60),
   type: z.enum(['bank', 'cash', 'card', 'investment', 'other']),
   currency: z.string().length(3),
-  initialBalance: z.number().min(0, 'No puede ser negativo'),
+  initialBalance: nonNegativeAmount,
   // Interés anual opcional de una cuenta remunerada, en % (p. ej. 3 o 2,25).
   interestRate: z
     .number()

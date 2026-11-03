@@ -643,6 +643,8 @@ export type Database = {
       }
     }
     Functions: {
+      login_throttle_fail: { Args: { p_keys: string[] }; Returns: number }
+      login_throttle_status: { Args: { p_keys: string[] }; Returns: number }
       convert_to_transfer: {
         Args: { p_to_account: string; p_transaction_id: string }
         Returns: string
