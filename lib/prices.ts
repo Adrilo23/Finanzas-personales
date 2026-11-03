@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import {
   cryptoSymbol,
+  isPriceStale,
   parseYahooChart,
   parseYahooSearch,
   type InstrumentInfo,
@@ -64,9 +65,6 @@ export const yahooProvider: PriceProvider = {
   },
 }
 
-/** Cada cuánto se vuelve a consultar la fuente para un mismo activo. */
-const REFRESH_EVERY_MS = 6 * 60 * 60 * 1000
-
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>
 
 /** Descarga y guarda los precios recientes de un activo (asset_prices es por usuario). */
@@ -93,21 +91,24 @@ export async function storePriceHistory(
 }
 
 /**
- * Refresca los precios de los activos del usuario que no se hayan consultado en las
- * últimas horas. Se llama al cargar páginas autenticadas (como los recurrentes): casi
+ * Refresca los precios de los activos del usuario que no se hayan consultado en su
+ * intervalo (fondos cada 6 h, cripto cada hora: `isPriceStale`). Se llama al cargar páginas autenticadas (como los recurrentes): casi
  * siempre es una consulta vacía. Los fallos de la fuente se ignoran para no romper la
  * página; se reintentará pasado el intervalo.
  */
 export async function refreshStalePrices(userId: string) {
   const supabase = await createClient()
-  const threshold = new Date(Date.now() - REFRESH_EVERY_MS).toISOString()
+  const now = new Date()
 
-  const { data: stale } = await supabase
+  // Pocos activos por usuario: se filtra aquí para que el intervalo por tipo sea testeable.
+  const { data: holdings } = await supabase
     .from('holdings')
-    .select('id, symbol, currency')
-    .or(`prices_checked_at.is.null,prices_checked_at.lt.${threshold}`)
+    .select('id, symbol, currency, asset_type, prices_checked_at')
 
-  if (!stale || stale.length === 0) return
+  const stale = (holdings ?? []).filter((h) =>
+    isPriceStale(h.asset_type, h.prices_checked_at, now)
+  )
+  if (stale.length === 0) return
 
   // Un mismo activo puede estar en varias cuentas: se descarga una vez.
   const bySymbol = new Map(stale.map((h) => [h.symbol, h.currency]))
@@ -119,7 +120,7 @@ export async function refreshStalePrices(userId: string) {
 
   await supabase
     .from('holdings')
-    .update({ prices_checked_at: new Date().toISOString() })
+    .update({ prices_checked_at: now.toISOString() })
     .in(
       'id',
       stale.map((h) => h.id)

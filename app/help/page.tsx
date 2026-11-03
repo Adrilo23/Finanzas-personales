@@ -122,8 +122,8 @@ const FAQ: { id: string; question: string; answer: React.ReactNode }[] = [
           anota cada compra o venta con las participaciones exactas que te indique el bróker.
         </p>
         <p>
-          La app consulta los precios sola cuando la abres, como mucho cada 6 horas, y calcula el
-          valor y la rentabilidad. Los fondos publican un único valor liquidativo al día y suele
+          La app consulta los precios sola cuando la abres (las criptomonedas, cada hora; los
+          fondos, cada 6 horas) y calcula el valor y la rentabilidad. Los fondos publican un único valor liquidativo al día y suele
           llegar con un día hábil de retraso; es normal que no cambie durante el día.
         </p>
       </>

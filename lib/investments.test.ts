@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest'
 import {
   cryptoSymbol,
   gainPercent,
+  isPriceStale,
   isValidIsin,
   normalizeIsin,
   parseUnitsInput,
@@ -145,5 +146,30 @@ describe('gainPercent', () => {
 
   test('sin aportación no hay porcentaje', () => {
     expect(gainPercent(0, 0)).toBeNull()
+  })
+})
+
+describe('isPriceStale', () => {
+  const now = new Date('2026-11-03T12:00:00+01:00')
+  const ago = (minutes: number) => new Date(now.getTime() - minutes * 60_000).toISOString()
+
+  test('sin consultar nunca, siempre toca', () => {
+    expect(isPriceStale('fund', null, now)).toBe(true)
+    expect(isPriceStale('crypto', null, now)).toBe(true)
+  })
+
+  test('cripto: cada hora', () => {
+    expect(isPriceStale('crypto', ago(59), now)).toBe(false)
+    expect(isPriceStale('crypto', ago(60), now)).toBe(true)
+  })
+
+  test('fondos: cada 6 horas (un único valor liquidativo al día)', () => {
+    expect(isPriceStale('fund', ago(90), now)).toBe(false)
+    expect(isPriceStale('fund', ago(359), now)).toBe(false)
+    expect(isPriceStale('fund', ago(360), now)).toBe(true)
+  })
+
+  test('un tipo desconocido se trata como fondo', () => {
+    expect(isPriceStale('otro', ago(90), now)).toBe(false)
   })
 })

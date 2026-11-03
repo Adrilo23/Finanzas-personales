@@ -139,7 +139,7 @@ Una cuenta de tipo `investment` (MyInvestor, Kraken…) contiene **activos**: fo
 | symbol | text | código en la fuente de precios (`0P0001CLDK.F`, `BTC-EUR`) |
 | name | text | resuelto desde la fuente al añadirlo |
 | currency | text | de momento solo `EUR` (se rechazan activos en otra moneda) |
-| prices_checked_at | timestamptz \| null | último intento de refrescar precios (se reintenta cada 6 h) |
+| prices_checked_at | timestamptz \| null | último intento de refrescar precios (se reintenta cada 6 h en fondos y cada hora en cripto) |
 | created_at | timestamptz | |
 
 `unique (account_id, symbol)`.
