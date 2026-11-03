@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
-import { getMonthlyEvolution } from '@/lib/reports'
+import { getMonthlyEvolution, getYearlyEvolution } from '@/lib/reports'
 import Link from 'next/link'
-import { ChartColumnIcon, FileTextIcon } from 'lucide-react'
+import { CalendarRangeIcon, ChartColumnIcon, FileTextIcon } from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
 import { PageHeader, PageShell } from '@/components/page-header'
 import { EmptyState } from '@/components/empty-state'
@@ -12,8 +12,21 @@ export const metadata: Metadata = { title: 'Evolución' }
 
 const euro = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' })
 
-export default async function ReportsPage() {
-  const data = await getMonthlyEvolution()
+type View = 'mensual' | 'anual'
+
+const VIEWS: { value: View; label: string }[] = [
+  { value: 'mensual', label: 'Mensual' },
+  { value: 'anual', label: 'Anual' },
+]
+
+export default async function ReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ vista?: string }>
+}) {
+  const view: View = (await searchParams).vista === 'anual' ? 'anual' : 'mensual'
+  const yearly = view === 'anual'
+  const data = yearly ? await getYearlyEvolution() : await getMonthlyEvolution()
 
   const totals = data.reduce(
     (acc, p) => ({
@@ -38,7 +51,10 @@ export default async function ReportsPage() {
         savingsRate === null
           ? '—'
           : `${savingsRate.toLocaleString('es-ES', { maximumFractionDigits: 1 })} %`,
-      hint: activeMonths > 0 ? `Gasto medio: ${euro.format(avgExpense)}/mes` : undefined,
+      hint:
+        activeMonths > 0
+          ? `Gasto medio: ${euro.format(avgExpense)}/${yearly ? 'año' : 'mes'}`
+          : undefined,
     },
   ]
 
@@ -46,20 +62,51 @@ export default async function ReportsPage() {
     <PageShell>
       <PageHeader
         title="Evolución"
-        description="Los últimos 12 meses, incluido el actual."
+        description={
+          yearly
+            ? 'Cada año desde tu primer movimiento, incluido el actual (hasta hoy).'
+            : 'Los últimos 12 meses, incluido el actual.'
+        }
         actions={
-          <Link href="/reports/monthly" className={buttonVariants({ variant: 'outline' })}>
-            <FileTextIcon data-icon="inline-start" />
-            Informe mensual
-          </Link>
+          <>
+            <Link href="/reports/monthly" className={buttonVariants({ variant: 'outline' })}>
+              <FileTextIcon data-icon="inline-start" />
+              Informe mensual
+            </Link>
+            <Link href="/reports/annual" className={buttonVariants({ variant: 'outline' })}>
+              <CalendarRangeIcon data-icon="inline-start" />
+              Informe anual
+            </Link>
+          </>
         }
       />
+
+      <nav aria-label="Periodo" className="grid w-full max-w-xs grid-cols-2 gap-1 rounded-[11px] bg-muted p-1">
+        {VIEWS.map((v) => {
+          const active = v.value === view
+          return (
+            <Link
+              key={v.value}
+              href={v.value === 'anual' ? '/reports?vista=anual' : '/reports'}
+              aria-current={active ? 'page' : undefined}
+              className={cn(
+                'flex h-8 items-center justify-center rounded-lg text-[0.8125rem] font-medium transition-[background-color,color,box-shadow] duration-150 outline-none focus-visible:ring-3 focus-visible:ring-ring/40',
+                active
+                  ? 'bg-card text-foreground shadow-[0_1px_2px_oklch(0.3_0.02_75/0.1),0_0_0_1px_oklch(0.3_0.02_75/0.05)] dark:bg-secondary'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {v.label}
+            </Link>
+          )
+        })}
+      </nav>
 
       {activeMonths === 0 ? (
         <EmptyState
           icon={ChartColumnIcon}
           title="Todavía no hay nada que mostrar"
-          description="Cuando registres movimientos verás aquí cómo evolucionan tus ingresos, gastos e inversión mes a mes."
+          description={`Cuando registres movimientos verás aquí cómo evolucionan tus ingresos, gastos e inversión ${yearly ? 'año a año' : 'mes a mes'}.`}
         />
       ) : (
         <>
@@ -86,7 +133,7 @@ export default async function ReportsPage() {
             ))}
           </dl>
 
-          <EvolutionChart data={data} />
+          <EvolutionChart data={data} title={yearly ? 'Por año' : 'Por mes'} />
 
           <details className="group surface overflow-hidden">
             <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3.5 text-sm font-medium outline-none select-none hover:bg-muted/40 focus-visible:bg-muted/60 sm:px-6 [&::-webkit-details-marker]:hidden">
@@ -103,7 +150,7 @@ export default async function ReportsPage() {
                 <thead className="text-xs text-muted-foreground">
                   <tr>
                     <th scope="col" className="px-4 py-2.5 text-left font-medium sm:px-6">
-                      Mes
+                      {yearly ? 'Año' : 'Mes'}
                     </th>
                     <th scope="col" className="px-3 py-2.5 font-medium">
                       Ingresos
@@ -126,7 +173,16 @@ export default async function ReportsPage() {
                         scope="row"
                         className="px-4 py-2 text-left font-medium capitalize sm:px-6"
                       >
-                        {p.month}
+                        {yearly ? (
+                          <Link
+                            href={`/reports/annual?year=${p.month}`}
+                            className="underline-offset-2 hover:text-brand hover:underline"
+                          >
+                            {p.month}
+                          </Link>
+                        ) : (
+                          p.month
+                        )}
                       </th>
                       <td className="px-3 py-2">{euro.format(p.ingresos)}</td>
                       <td className="px-3 py-2">{euro.format(p.inversion)}</td>

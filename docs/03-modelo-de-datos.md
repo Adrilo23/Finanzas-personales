@@ -117,12 +117,14 @@ Un límite mensual por categoría de gasto; se reinicia cada mes (no hay histór
 
 `unique (user_id, category_id)`: un presupuesto por categoría; guardar otro para la misma categoría sustituye el importe (`upsert`). La FK no pasa por RLS, así que la Server Action comprueba que la categoría es del usuario y de tipo `expense`. Lo gastado se calcula en `lib/budgets.ts`: movimientos de gasto del mes en curso, **sumando los de las subcategorías al padre**. Avisos: «Cerca del límite» desde el 80 %, «Superado» por encima del 100 %.
 
-### Objetivos de ahorro — `0012`
-**savings_goals**: `id`, `user_id`, `name` (1-80), `icon` (emoji opcional), `target_cents` (`> 0`), `target_date` (opcional), `created_at`.
+### Objetivos de ahorro — `0012`, `0013`
+**savings_goals**: `id`, `user_id`, `name` (1-80), `icon` (emoji opcional), `target_cents` (`> 0`), `target_date` (opcional), `account_id` (opcional, FK → accounts, `on delete set null`; `0013`), `created_at`. Las políticas de insert y update exigen que la cuenta vinculada sea del mismo usuario.
 
 **goal_contributions**: `id`, `user_id`, `goal_id` (FK → savings_goals, `on delete cascade`), `amount_cents` (`<> 0`; positivo = aportación, negativo = retirada), `contribution_date`, `note`, `created_at`. La política de insert exige que el objetivo sea del mismo usuario (la FK no pasa por RLS).
 
 Lo ahorrado es la suma de aportaciones (mínimo 0; la action impide retirar más de lo ahorrado). **No son movimientos** (`transactions`): no afectan a saldos, informes ni presupuestos. Progreso, ritmo y estado: `lib/goals.ts`.
+
+**Objetivo vinculado** (`account_id` no nulo): lo ahorrado es el `balance_cents` de la cuenta (`account_balances`) y el ritmo, el neto de sus movimientos de los últimos 90 días (traspasos incluidos; la revalorización de una cuenta de inversión no cuenta como ritmo). No admite aportaciones manuales (la action lo impide); las que tuviera se conservan y vuelven a contar si se desvincula o se borra la cuenta.
 
 ### Inversiones — `0007`
 Una cuenta de tipo `investment` (MyInvestor, Kraken…) contiene **activos**: fondos (con ISIN) o criptomonedas (sin ISIN). Todos se identifican por su código en la fuente de precios (`symbol`), y las participaciones las introduce el usuario desde su bróker.
@@ -208,9 +210,9 @@ accounts 1───N holdings 1───N holding_operations
 - **`account_balances`** (`0002`, recreada en `0007` y `0008`, `security_invoker`): `cash_cents` = saldo inicial + movimientos no borrados − compras + ventas (las que tienen `affects_cash`); `balance_cents` = `cash_cents` + `market_value_cents` (valor de mercado de sus activos). Las columnas de la vista salen anulables en los tipos generados.
 - **`holding_values`** (`0007`, `security_invoker`): por activo, participaciones netas (compras − ventas), aportado neto (`invested_cents`), último precio y fecha, `value_cents = round(participaciones × precio × 100)` y `gain_cents = valor − aportado`, todo en `numeric` y redondeado a céntimos en SQL.
 ### Traspasos
-Dos filas de `transactions` con el mismo `transfer_id` (pata negativa en origen, positiva en destino), insertadas en una sola sentencia (`lib/transfers.ts` → `buildTransferRows`). Se editan con la función `update_transfer` (atómica, `security invoker`) y se borran juntas. Al no tener categoría, no cuentan como ingreso, gasto, inversión ni presupuesto. En listas sin filtro de cuenta se muestra solo la pata de salida.
+Dos filas de `transactions` con el mismo `transfer_id` (pata negativa en origen, positiva en destino), insertadas en una sola sentencia (`lib/transfers.ts` → `buildTransferRows`). Se editan con la función `update_transfer` (atómica, `security invoker`) y se borran juntas. `convert_to_transfer` (`0013`, atómica, `security invoker`) convierte un movimiento de salida con categoría de tipo `investment` (lo que antes de los traspasos se registraba como inversión) en la pata de salida de un traspaso: le quita la categoría, le asigna un `transfer_id` y crea la pata de entrada en la cuenta destino. Conserva los adjuntos. Al no tener categoría, no cuentan como ingreso, gasto, inversión ni presupuesto. En listas sin filtro de cuenta se muestra solo la pata de salida.
 
-- Totales por categoría y periodo, e ingresos frente a gastos por mes: se calculan en el servidor (`app/page.tsx`, `lib/reports.ts`), no en tablas.
+- Totales por categoría y periodo, e ingresos frente a gastos por mes y por año: se calculan en el servidor (`app/page.tsx`, `lib/reports.ts`, `lib/monthly-report.ts`, `lib/annual-report.ts`), no en tablas. Las consultas que pueden superar las 1000 filas que devuelve PostgREST por respuesta (un año, todo el histórico) paginan con `fetchAllRows` (`lib/fetch-all.ts`).
 
 ## Diferencias con el diseño inicial
 

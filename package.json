@@ -9,7 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:types": "npx supabase gen types typescript --linked --schema public > lib/supabase/database.types.ts"
+    "db:types": "npx supabase gen types typescript --remote --schema public > lib/supabase/database.types.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.5.7",
@@ -43,6 +43,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
     "serwist": "^9.5.12",
+    "supabase": "3.0.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^5.0.3"

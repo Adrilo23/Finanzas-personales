@@ -26,15 +26,15 @@ npm test          # tests (Vitest), una pasada
 npm run test:watch  # tests en modo vigilancia
 npm run db:types  # regenera lib/supabase/database.types.ts desde la BD remota
 
-npx supabase migration list  # estado local vs remoto de las migraciones
-npx supabase db push         # aplica migraciones pendientes al proyecto remoto
+npx supabase migration list --remote  # estado local vs remoto de las migraciones
+npx supabase db push --remote         # aplica migraciones pendientes al proyecto remoto
 ```
 
 Los tests (Vitest, entorno node, `TZ=Europe/Madrid`) cubren la lógica pura de `lib/` y viven junto al código (`lib/*.test.ts`). Para que algo sea testeable, separa el cálculo de la consulta a Supabase: `getX()` consulta y delega en una función pura `computeX()` (ver `lib/budgets.ts`, `lib/reports.ts`, `lib/recurring.ts`, `lib/stats.ts`). Todo cambio en dinero, signos, fechas o agregados debe venir con su test. GitHub Actions (`.github/workflows/ci.yml`) pasa lint, tipos y tests en cada push a `main`.
 
 Para comprobar cambios de UI en un navegador real está el MCP de Playwright (`.mcp.json`): arranca `npm run dev` y navega a `http://localhost:3000`. Inicia sesión con un usuario de pruebas, nunca con la cuenta real.
 
-Variables de entorno (en `.env.local`): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+Variables de entorno (en `.env.local`): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Opcionales, solo servidor: `RESEND_API_KEY` y `EMAIL_FROM` para enviar el informe mensual por correo (`lib/email.ts`); sin ellas, el botón «Envíamelo» responde que el envío no está configurado.
 
 ## Arquitectura
 
@@ -86,11 +86,13 @@ Se guardan en el bucket privado `attachments` con la ruta `{user_id}/{transactio
 - La navegación (`components/nav-links.tsx`, cliente) es una barra superior desde `lg` y una barra inferior de 5 pestañas por debajo. Si añades una sección, añádela a `NAV_ITEMS`: con `primary: true` va en la barra inferior (máximo 4 más «Más») y con `false` dentro de la hoja «Más». `topBar: false` la saca de la barra superior de escritorio (así está «Ayuda», que va en el menú de usuario).
 - Estados de presupuesto: `BudgetStatusBadge` y `BudgetBar` (`components/budget-progress.tsx`), con el token `warning` para «cerca del límite». El color siempre va con icono y texto.
 
-### Exportación
-`app/transactions/export/route.ts` (runtime `nodejs`) genera XLSX (con `xlsx`) o PDF (con `jspdf` + `jspdf-autotable`) según los mismos filtros de `/transactions`.
+### Exportación e informes
+`app/transactions/export/route.ts` (runtime `nodejs`) genera XLSX (con `xlsx`) o PDF (con `jspdf` + `jspdf-autotable`) según los mismos filtros de `/transactions`. Los informes mensual (`/reports/monthly`) y anual (`/reports/annual`) tienen su cálculo puro en `lib/monthly-report.ts` / `lib/annual-report.ts`, su PDF en `lib/*-report-pdf.ts` y su ruta `export`. El año en curso se compara con el mismo periodo del año anterior. El mensual se puede enviar al correo del usuario («Envíamelo», `app/reports/monthly/actions.ts`): siempre a su propio email, nunca a un destinatario que llegue del cliente.
+
+**Límite de 1000 filas:** PostgREST corta cada respuesta en `max_rows` (1000) sin avisar. Cualquier consulta de movimientos que pueda superar ese número (un año, todo el histórico) debe paginar con `fetchAllRows` (`lib/fetch-all.ts`) y un orden estable (`.order('id')`).
 
 ### PWA / offline
 Serwist con `@serwist/turbopack`: `next.config.ts` lo envuelve con `withSerwist`, el worker está en `app/sw.ts` y se sirve desde `app/serwist/[path]/route.ts`. Si la navegación falla sin conexión, se muestra `/offline`. La revisión de caché es el hash del commit de git.
 
 ### Base de datos
-Las migraciones SQL están en `supabase/migrations/`, numeradas (`000N_descripcion.sql`). El repo está enlazado con la CLI al proyecto remoto (`kwouosaoaeydipzavjdr`): las migraciones se aplican con `npx supabase db push` y el historial remoto debe coincidir con `migration list`. No hay base de datos local en Docker. Después de cambiar el esquema, ejecuta `npm run db:types`. Los clientes de `lib/supabase/` están tipados con `Database`, así que las consultas tienen tipos (las columnas de las vistas salen anulables). Cada tabla nueva debe activar RLS e incluir las cuatro políticas `*_own`. Un trigger sobre `auth.users` precarga las categorías por defecto de cada usuario nuevo.
+Las migraciones SQL están en `supabase/migrations/`, numeradas (`000N_descripcion.sql`). El repo está enlazado con la CLI al proyecto remoto (`kwouosaoaeydipzavjdr`): las migraciones se aplican con `npx supabase db push --remote` y el historial remoto debe coincidir con `migration list --remote`. La CLI está fijada en `devDependencies` (`supabase@3.0.0`; súbela a propósito, no con `npx` a ciegas). Desde la CLI 3, sin `--remote` los comandos apuntan a una base local en Docker que no existe y fallan con `ECONNREFUSED 127.0.0.1:54322`. No hay base de datos local en Docker. Después de cambiar el esquema, ejecuta `npm run db:types`. Los clientes de `lib/supabase/` están tipados con `Database`, así que las consultas tienen tipos (las columnas de las vistas salen anulables). Cada tabla nueva debe activar RLS e incluir las cuatro políticas `*_own`. Un trigger sobre `auth.users` precarga las categorías por defecto de cada usuario nuevo.

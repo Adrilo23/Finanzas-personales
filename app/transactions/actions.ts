@@ -1,7 +1,11 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { transactionSchema, transferSchema } from '@/lib/validation/transaction-schemas'
+import {
+  convertToTransferSchema,
+  transactionSchema,
+  transferSchema,
+} from '@/lib/validation/transaction-schemas'
 import { buildTransferRows } from '@/lib/transfers'
 import { applyCategorySign, eurosToCents } from '@/lib/money'
 import { revalidatePath } from 'next/cache'
@@ -189,6 +193,34 @@ export async function updateTransfer(transferId: string, formData: FormData) {
   }
 
   revalidateMoneyViews()
+  return { success: true }
+}
+
+/**
+ * Convierte un movimiento de inversión (anterior a los traspasos) en un traspaso hacia
+ * otra cuenta. Función convert_to_transfer: atómica, con RLS, y solo admite salidas
+ * con categoría de tipo inversión.
+ */
+export async function convertToTransfer(formData: FormData) {
+  const parsed = convertToTransferSchema.safeParse({
+    transactionId: formData.get('transactionId'),
+    toAccountId: formData.get('toAccountId'),
+  })
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message }
+  }
+
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('convert_to_transfer', {
+    p_transaction_id: parsed.data.transactionId,
+    p_to_account: parsed.data.toAccountId,
+  })
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidateMoneyViews()
+  revalidatePath('/goals')
   return { success: true }
 }
 

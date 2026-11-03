@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.15"
   }
   public: {
     Tables: {
@@ -467,6 +467,7 @@ export type Database = {
       }
       savings_goals: {
         Row: {
+          account_id: string | null
           created_at: string
           icon: string | null
           id: string
@@ -476,6 +477,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          account_id?: string | null
           created_at?: string
           icon?: string | null
           id?: string
@@ -485,6 +487,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          account_id?: string | null
           created_at?: string
           icon?: string | null
           id?: string
@@ -493,7 +496,22 @@ export type Database = {
           target_date?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "savings_goals_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "account_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "savings_goals_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       transactions: {
         Row: {
@@ -625,6 +643,10 @@ export type Database = {
       }
     }
     Functions: {
+      convert_to_transfer: {
+        Args: { p_to_account: string; p_transaction_id: string }
+        Returns: string
+      }
       run_contribution_plan: {
         Args: { p_dates: string[]; p_next: string; p_rule_id: string }
         Returns: undefined

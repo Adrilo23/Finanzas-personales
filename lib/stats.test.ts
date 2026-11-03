@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { percentChange, sumByType } from './stats'
-import { aggregateMonthly } from './reports'
+import { aggregateMonthly, aggregateYearly } from './reports'
 
 describe('sumByType', () => {
   test('separa ingresos, gastos e inversión en céntimos positivos', () => {
@@ -58,5 +58,43 @@ describe('aggregateMonthly', () => {
     })
     expect(result[10].gastos).toBe(10)
     expect(result.reduce((sum, p) => sum + p.gastos, 0)).toBe(460.5)
+  })
+})
+
+describe('aggregateYearly', () => {
+  const now = new Date(2026, 10, 3)
+  const row = (amount_cents: number, transaction_date: string, type: string | null) => ({
+    amount_cents,
+    transaction_date,
+    categories: type ? { type } : null,
+  })
+
+  test('sin movimientos: solo el año actual, a 0', () => {
+    expect(aggregateYearly([], now)).toEqual([
+      { month: '2026', ingresos: 0, gastos: 0, inversion: 0, balance: 0 },
+    ])
+  })
+
+  test('un punto por año desde el más antiguo, con los años vacíos a 0', () => {
+    const result = aggregateYearly(
+      [
+        row(150000, '2024-03-01', 'income'),
+        row(-40000, '2024-03-02', 'expense'),
+        row(-10000, '2026-01-10', 'investment'),
+        // Traspaso: no cuenta como ingreso ni gasto y sus patas se anulan en el balance.
+        row(-5000, '2026-02-01', null),
+        row(5000, '2026-02-01', null),
+      ],
+      now
+    )
+    expect(result).toEqual([
+      { month: '2024', ingresos: 1500, gastos: 400, inversion: 0, balance: 1100 },
+      { month: '2025', ingresos: 0, gastos: 0, inversion: 0, balance: 0 },
+      { month: '2026', ingresos: 0, gastos: 0, inversion: 100, balance: -100 },
+    ])
+  })
+
+  test('ignora movimientos con fecha futura en un año posterior', () => {
+    expect(aggregateYearly([row(1000, '2027-01-01', 'income')], now)).toHaveLength(1)
   })
 })

@@ -4,7 +4,7 @@
 >
 > **Fuente de verdad:** este archivo del repo (GitHub `Adrilo23/Finanzas-personales`). Claude Code lo actualiza al terminar cada tarea, en el mismo commit que el código.
 
-## Estado actual: 🟢 Fase 1 y Fase 3 completas, con tests y CI → Fase 3b completa (la actualización programada de precios se aparca, ver nota); objetivos de ahorro e informe mensual en PDF hechos; historial de migraciones remoto al día (0001-0012); página de ayuda con guía de instalación hecha; siguiente: ayudas contextuales "?" o modo demo + landing (Fase 4)
+## Estado actual: 🟢 Fases 1, 3, 3b y 3c completas, con tests y CI (la actualización programada de precios y el envío automático del informe quedan aparcados, ver notas). Gráfica anual, informe anual con PDF, informe mensual por email, objetivos vinculados a una cuenta y conversión de inversiones antiguas a traspaso hechos. Migraciones 0001-0013 aplicadas en remoto; CLI de Supabase fijada (`supabase@3.0.0` en devDependencies). Siguiente: ayudas contextuales "?" o modo demo + landing (Fase 4)
 
 Última actualización: 2026-11-03
 
@@ -45,7 +45,8 @@ Objetivo: poder llevar mis propias cuentas reales, aunque sea con UI básica.
 ## Fase 3 — Funcionalidades avanzadas
 - [x] Movimientos recurrentes (nóminas, alquiler, suscripciones) — generación diferida al cargar páginas (`lib/recurring.ts`)
 - [x] Adjuntar tickets/facturas (Supabase Storage) — bucket privado `attachments` (migración 0003)
-- [~] Gráficas de evolución mensual/anual (Recharts) — mensual (últimos 12 meses) hecha; **falta la anual**
+- [x] Gráficas de evolución mensual/anual (Recharts) — en Evolución, selector Mensual (últimos 12 meses) | Anual (un punto por año desde el primer movimiento; el año en curso, hasta hoy). Cada año de la tabla enlaza a su informe anual. `aggregateYearly` en `lib/reports.ts`, con tests
+  - De paso: las consultas de 12 meses y de todo el histórico paginan (`fetchAllRows`), porque PostgREST corta en 1000 filas por respuesta y los totales salían incompletos sin avisar
 - [x] Exportación a Excel/PDF — `app/transactions/export/route.ts`
 - [x] Presupuestos por categoría con alertas — migración `0005`, `/budgets` y bloque en el inicio. Límite mensual por categoría de gasto, las subcategorías suman al padre, y los avisos son visuales (80 % «cerca del límite», >100 % «superado»), sin notificaciones externas. Partió de la propuesta del Project de claude.ai, adaptada al diseño y con correcciones (fechas en hora local, validación de la categoría en el servidor)
 
@@ -75,21 +76,27 @@ Idea surgida al usar la app: una cuenta como MyInvestor contiene fondos cuyo val
 - [x] **Plan de aportación periódica** (migración `0009`): un traspaso recurrente con "Repartir en activos". En cada vencimiento genera, de forma atómica, el traspaso (p. ej. BBVA → My Investor 500 €), los traspasos a otras cuentas si un activo vive en otra (My Investor → Kraken 50 €) y una **compra pendiente** por activo con participaciones estimadas. Las pendientes se ven en el activo y en un aviso en el inicio, y se confirman con las participaciones reales del bróker
 - [x] **Editar reglas recurrentes y planes** (migración `0010`): botón de lápiz en cada regla. Se cambian importe, cuentas, categoría, frecuencia, próxima fecha y el reparto en activos; solo afecta a los próximos vencimientos. Los planes se guardan con la función atómica `update_recurring_transfer` (regla y reparto a la vez). Un movimiento no se convierte en traspaso ni al revés
 - [x] **Cuentas remuneradas** (migración `0011`): campo opcional «Interés anual» en cualquier cuenta. Cada día 1 se abona como ingreso (categoría «Intereses») el interés del mes anterior sobre el saldo medio diario de efectivo (% ÷ 12). Si la app lleva meses sin abrirse, abona cada mes con interés compuesto. Se usa el % que pone el usuario (bruto o neto); el abono generado se puede editar si el banco paga otra cifra
-- [ ] Revisar la categoría `investment` cuando existan las transferencias: hasta entonces, lo registrado como gasto de inversión se deja como está
+- [x] Revisar la categoría `investment` ahora que existen los traspasos (2026-11-03, migración `0013`)
+  - Decisión: el tipo `investment` se mantiene para dinero que sale hacia algo que no se lleva en la app. Lo registrado antes como inversión hacia una cuenta que ahora sí está en la app se convierte **uno a uno** con «Convertir en traspaso» (botón de flechas en Movimientos, solo en salidas de categoría inversión). Función atómica `convert_to_transfer`: el movimiento pasa a ser la pata de salida (conserva adjuntos) y se crea la entrada en la cuenta destino
+  - Riesgo avisado en el diálogo y en la ayuda: suma efectivo a la cuenta destino; si las compras de esos fondos se registraron «sin efectivo», el efectivo sale de más. Por eso no se convierte en bloque
+  - Las reglas recurrentes de inversión no se convierten (una regla no pasa de movimiento a traspaso): hay que crear una regla de traspaso nueva y borrar la antigua
 
 ## Fase 3c — Objetivos e informes (añadida 2026-10-06)
 - [x] **Objetivos de ahorro** (migración `0012`, `/goals`): nombre, icono, cantidad y fecha opcional. El progreso sale de **aportaciones manuales** (y retiradas) que registra el usuario; no son movimientos, así que no tocan saldos, informes ni presupuestos. Muestra ahorrado/objetivo, lo que falta, cuánto aportar al mes para llegar a la fecha, el ritmo real (media de los últimos 90 días), la fecha estimada y un estado (cumplido · vas a tiempo · con retraso · fecha superada). Lógica pura y testeada en `lib/goals.ts`
-  - Decisión: aportaciones manuales y no vinculadas a una cuenta, para no contar dos veces el dinero ni acoplarlo al saldo. **Posible mejora:** vincular un objetivo a una cuenta de ahorro y leer el progreso de su saldo, o generar la aportación desde un traspaso
+  - Decisión: aportaciones manuales y no vinculadas a una cuenta, para no contar dos veces el dinero ni acoplarlo al saldo
+  - [x] **Objetivo vinculado a una cuenta** (opcional, migración `0013`): el progreso es el saldo de la cuenta y el ritmo, el neto de sus movimientos de 90 días; sin aportaciones manuales. Si se borra la cuenta, vuelve a las aportaciones que tuviera. Pendiente: los informes mensual y anual solo listan aportaciones manuales, no el movimiento de las cuentas vinculadas
   - Resumen de objetivos en el inicio (los que van con retraso, primero)
 - [x] **Informe mensual** (`/reports/monthly?month=yyyy-MM`, enlazado desde Evolución): totales y balance del mes con tasa de ahorro y comparación con el mes anterior, gasto por categoría, mayores gastos, estado de presupuestos y aportaciones a objetivos. Se descarga como **PDF** (`/reports/monthly/export`, `lib/monthly-report-pdf.ts`). Cálculo puro y testeado en `lib/monthly-report.ts`
   - Los presupuestos no guardan histórico: un mes pasado se compara con los límites actuales
-  - Pendiente: envío por email y comparación anual
+  - [x] **Envío por email** (botón «Envíamelo»): resumen en el cuerpo y el PDF adjunto, siempre al correo de la sesión. Resend por su API REST (`lib/email.ts`, interfaz `EmailProvider`), con `RESEND_API_KEY` y `EMAIL_FROM`. **Falta configurarlo:** crear la cuenta de Resend y poner las variables en Vercel; para enviar a otros correos que no sean el de la cuenta de Resend hace falta verificar un dominio
+  - Aparcado: envío automático cada mes. Necesita cron y service role key (leer datos sin sesión), la misma excepción que la actualización programada de precios
+- [x] **Informe anual** (`/reports/annual?year=yyyy`, enlazado desde Evolución): totales, balance y tasa de ahorro frente al año anterior, mes a mes, gasto por categoría comparado con el año anterior, mayores gastos y aportaciones a objetivos; PDF en `/reports/annual/export`. El año en curso se compara con el **mismo periodo** del anterior (1 ene – hoy). Cálculo puro y testeado en `lib/annual-report.ts`
 
 ## Fase 4 — Pulido y preparación para portfolio/LinkedIn
 - [x] Diseño UI cuidado (no solo funcional) — rediseño completo: sistema de tokens (modo claro/oscuro), navegación con barra inferior en móvil, formularios nuevos, estados vacíos y de carga, gráfica accesible
 - [ ] Ayuda para nuevos usuarios (prioritaria: la usarán familia y amigos y el objetivo es venderla)
   - [x] Lista de primeros pasos en el inicio que se marca sola según el uso (cuenta, movimiento, presupuesto, recurrente, objetivo, instalar en el móvil); se puede ocultar (queda en el navegador) y desaparece al completarla. El paso de instalar lo marca el cliente (`useInstallState`): hecho si la app se abre como instalada o se instaló desde este navegador
-  - [x] Página de ayuda `/help` (pública, para seguir la guía antes de registrarse; enlazada desde el login, el menú de usuario y «Más»): 8 preguntas frecuentes (importe en positivo, tipos de movimiento, recurrentes, subcategorías en presupuestos, corregir/borrar, inversiones y precios, objetivos, sin conexión) y guía de instalación para iPhone/iPad, Android y ordenador que se abre en la del dispositivo detectado (`lib/install.ts`), con botón «Instalar» donde el navegador lo permite (Chrome/Edge). Pendiente: probarla en un iPhone y un Android reales
+  - [x] Página de ayuda `/help` (pública, para seguir la guía antes de registrarse; enlazada desde el login, el menú de usuario y «Más»): 9 preguntas frecuentes (importe en positivo, tipos de movimiento, convertir inversiones antiguas, recurrentes, subcategorías en presupuestos, corregir/borrar, inversiones y precios, objetivos, sin conexión) y guía de instalación para iPhone/iPad, Android y ordenador que se abre en la del dispositivo detectado (`lib/install.ts`), con botón «Instalar» donde el navegador lo permite (Chrome/Edge). Pendiente: probarla en un iPhone y un Android reales
   - [ ] Ayudas contextuales "?" solo en los puntos confusos: importe en positivo, gasto/inversión/transferencia, recurrentes generados al abrir la app, subcategorías que suman al padre
   - [ ] Modo demo con datos de ejemplo ("Probar sin registrarme"), junto con la landing
 - [ ] Landing page del producto

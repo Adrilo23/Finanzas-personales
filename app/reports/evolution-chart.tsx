@@ -13,6 +13,7 @@ import {
 } from 'recharts'
 import type { MonthlyPoint } from '@/lib/reports'
 
+// Sirve para la vista mensual y la anual (`month` es la etiqueta del punto).
 // Orden validado para daltonismo: ingresos → inversión → gastos (barras contiguas).
 const SERIES = [
   { key: 'ingresos', label: 'Ingresos', color: 'var(--chart-1)' },
@@ -57,11 +58,11 @@ function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
   )
 }
 
-export function EvolutionChart({ data }: { data: MonthlyPoint[] }) {
+export function EvolutionChart({ data, title }: { data: MonthlyPoint[]; title: string }) {
   return (
     <figure className="surface p-4 sm:p-6">
       <figcaption className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
-        <span className="text-[0.9375rem] font-semibold">Por mes</span>
+        <span className="text-[0.9375rem] font-semibold">{title}</span>
         <ul className="flex flex-wrap gap-x-4 gap-y-1 text-[0.8125rem] text-muted-foreground">
           {SERIES.map((s) => (
             <li key={s.key} className="flex items-center gap-1.5">

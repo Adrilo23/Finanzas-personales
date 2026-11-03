@@ -8,6 +8,8 @@ export const goalSchema = z.object({
   target: z.number().positive('El importe debe ser mayor que 0'),
   /** Opcional: cadena vacía = sin fecha. */
   targetDate: z.union([isoDate, z.literal('')]),
+  /** Opcional: cadena vacía = sin cuenta vinculada (progreso por aportaciones manuales). */
+  accountId: z.union([z.string().uuid(), z.literal('')]),
 })
 
 export type GoalInput = z.infer<typeof goalSchema>
