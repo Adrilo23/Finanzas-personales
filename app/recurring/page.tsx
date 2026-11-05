@@ -167,12 +167,16 @@ export default async function RecurringPage() {
                           </span>
                         )}
                       </p>
-                      <p className="truncate text-[0.8125rem] text-muted-foreground">
+                      {/* Sin recortar: en móvil la fecha baja a otra línea en vez de perderse. */}
+                      <p className="text-[0.8125rem] break-words text-muted-foreground">
                         {FREQUENCY_LABELS[rule.frequency as keyof typeof FREQUENCY_LABELS]} ·{' '}
                         {isTransfer
                           ? `${account?.name ?? '—'} → ${toAccount?.name ?? '—'}`
                           : account?.name}{' '}
-                        · próxima el {formatShortDate(rule.next_run_date)}
+                        <span className="block whitespace-nowrap sm:inline">
+                          <span className="hidden sm:inline">· </span>próxima el{' '}
+                          {formatShortDate(rule.next_run_date)}
+                        </span>
                       </p>
                       {allocations.length > 0 && (
                         <p className="mt-0.5 truncate text-xs text-muted-foreground">
@@ -195,7 +199,8 @@ export default async function RecurringPage() {
                       />
                     )}
                   </div>
-                  <div className="flex items-center">
+                  {/* En móvil, las acciones en su propia fila: el texto y el importe usan todo el ancho. */}
+                  <div className="-mt-1 -mb-1.5 flex basis-full items-center justify-end sm:m-0 sm:basis-auto">
                     <NewRecurringDialog
                       accounts={accounts ?? []}
                       categories={categories ?? []}

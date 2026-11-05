@@ -45,7 +45,7 @@ Objetivo: poder llevar mis propias cuentas reales, aunque sea con UI básica.
   - F-07 (traspaso sin saldo suficiente): **no se bloquea**, ver Decisiones
 - [x] Hojas de formulario en móvil (2026-11-05, PR #11): en Android (Chrome) y iOS el teclado tapaba la hoja inferior desde la categoría y no se llegaba a «Guardar». `DialogContent` mide el teclado con `visualViewport` (`components/use-keyboard-inset.ts`), se coloca encima, ajusta su alto y lleva a la vista el campo enfocado. No se usa `interactive-widget=resizes-content` porque subiría también la barra de pestañas en todas las páginas. Comprobado en móvil real (2026-11-05)
 - [x] Gráfica de evolución (2026-11-05, PR #8): eje Y con marcas redondas (`niceAxis`, `lib/chart-axis.ts`, con tests), «€» una vez en el título, sin exagerar los negativos pequeños y un mes sí y otro no en móvil
-- [ ] Recurrentes en móvil: la línea «Mensual · Banco · próxima el …» se corta en «próxi…» porque los tres botones (editar, pausar, borrar) se comen el ancho. Propuesta: en móvil, llevar las acciones a un menú «⋯»
+- [x] Recurrentes en móvil (2026-11-05): la línea «Mensual · BBVA · próxima el …» se cortaba (a veces hasta «Mensual · BBVA…», sin fecha) porque los tres botones se comían el ancho. Ahora, por debajo de `sm`, los botones van en su propia fila a la derecha y la próxima fecha en su propia línea; nada se recorta. Comprobado a 360 px y en escritorio
 - [x] Recurrentes mensuales en día 29-31: antes, al pasar por un mes corto, bajaban a 28 y se quedaban ahí. Arreglado con `anchor_day` (migración `0006`): cada vencimiento vuelve al día original. Las reglas que ya hubieran derivado antes del arreglo se quedan en el día en que estaban
 
 ## Fase 2 — PWA y multiplataforma
@@ -138,13 +138,12 @@ Idea surgida al usar la app: una cuenta como MyInvestor contiene fondos cuyo val
 - **¿Registrar pagos leyendo las notificaciones del banco?** — Descartado. Una PWA no puede leer las notificaciones de otras apps (ni en Android ni en iOS); solo lo permite una app nativa de Android con permiso de acceso a notificaciones, y en iOS no existe. No se incluye. Alternativas realistas si se retoma: importar el extracto CSV/Excel del banco, o conectar con Open Banking (PSD2) mediante un agregador de pago.
 
 ## Pendiente, por prioridad (2026-11-05)
-1. **Recurrentes en móvil:** la próxima fecha se corta (ver Calidad).
-2. **Nombre del producto y dominio propio:** con el dominio se verifica también el remitente de Resend para que el informe por email llegue a cualquier usuario.
-3. **`DESIGN.md`** y documentación pública.
-4. **Registrar sin conexión** y sincronizar después (Fase 2).
-5. **Informes:** los objetivos vinculados a una cuenta no aparecen en las aportaciones del mensual ni del anual.
-6. **Antes de vender (Fase 5):** proveedor de precios con licencia comercial, política de privacidad/RGPD, planes con Stripe, y, si hace falta, cron con service role key para precios e informe automático.
-7. **Más adelante:** empaquetar con Tauri para escritorio.
+1. **Nombre del producto y dominio propio:** con el dominio se verifica también el remitente de Resend para que el informe por email llegue a cualquier usuario.
+2. **`DESIGN.md`** y documentación pública.
+3. **Registrar sin conexión** y sincronizar después (Fase 2).
+4. **Informes:** los objetivos vinculados a una cuenta no aparecen en las aportaciones del mensual ni del anual.
+5. **Antes de vender (Fase 5):** proveedor de precios con licencia comercial, política de privacidad/RGPD, planes con Stripe, y, si hace falta, cron con service role key para precios e informe automático.
+6. **Más adelante:** empaquetar con Tauri para escritorio.
 
 ## Cómo usar este documento con Claude
 - **Claude Code:** al completar una tarea, marca su casilla aquí (con una nota breve si queda algo pendiente), actualiza "Estado actual" y la fecha, e incluye el cambio en el mismo commit que el código.
