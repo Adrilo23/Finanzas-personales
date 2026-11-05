@@ -115,8 +115,8 @@ Idea surgida al usar la app: una cuenta como MyInvestor contiene fondos cuyo val
 - [x] Landing page del producto (2026-11-05): en `/` para quien no tiene sesión. Estructura «la libreta de cuentas»: cuatro apuntes que se escriben en una libreta y cuya suma se convierte en el resumen de la app; después presupuestos, objetivos, evolución e informe con piezas reales de la app, la postura sobre los datos («Tu banco no se entera»), instalación y cierre. Mensajes confirmados: sin conectar el banco, sin anuncios, gratis. Contexto de producto en `PRODUCT.md` y dirección de diseño en `.impeccable/surfaces/app-landing-tsx.md` (PR #8)
   - Revisión de diseño en dos rondas: la suma de la libreta cuadra con el balance («+ 11 apuntes más»), la animación espera a que la libreta esté en pantalla (`components/reveal-on-view.tsx`), las tres promesas van por separado y la etiqueta «Demo · datos de ejemplo» no se corta en móvil
   - Pendiente: decidir el nombre del producto (provisional «Finanzas»)
-  - Pendiente: `DESIGN.md` (documentación del sistema de diseño) a partir del código; el agente que lo escribía se cortó
-- [~] Documentación técnica del proyecto — `CLAUDE.md` describe la arquitectura; **falta la documentación pública** y `DESIGN.md`
+  - [x] `DESIGN.md` (2026-11-05): el sistema de diseño en el formato estándar (tokens en el frontmatter, ocho secciones), sacado del código: colores, tipografía, layout, sombras, formas, componentes y reglas. Lo acompaña `.impeccable/design.json` (rampas de color, sombras, movimiento y componentes de muestra)
+- [~] Documentación técnica del proyecto — `CLAUDE.md` describe la arquitectura; **falta la documentación pública**; el sistema de diseño está en `DESIGN.md`
 - [x] **Skill «safe-money-handling» para Agensi.io** (2026-11-05, PR #9): las reglas de dinero de la app, en genérico, para vender o mostrar como portfolio. `skills/safe-money-handling/`: `SKILL.md` + `reference/money.ts` (sin dependencias) + `money.test.ts` (9 tests con `node --test`); excluido del `tsconfig` de la app. Listado no exclusivo y sin ceder la propiedad intelectual; Agensi se queda el 30 %. ZIP, capturas, logo y textos del anuncio preparados; enviado a Agensi por Adrián (2026-11-05)
 - [x] Capturas para la publicación 3 de LinkedIn (presupuestos, recurrentes, objetivos) con el usuario de pruebas `ejemplo@ejemplo.com`; nunca con la cuenta real
 - [ ] Despliegue estable en dominio propio
@@ -139,7 +139,7 @@ Idea surgida al usar la app: una cuenta como MyInvestor contiene fondos cuyo val
 
 ## Pendiente, por prioridad (2026-11-05)
 1. **Nombre del producto y dominio propio:** con el dominio se verifica también el remitente de Resend para que el informe por email llegue a cualquier usuario.
-2. **`DESIGN.md`** y documentación pública.
+2. **Documentación pública** (README para quien vea el repo).
 3. **Registrar sin conexión** y sincronizar después (Fase 2).
 4. **Informes:** los objetivos vinculados a una cuenta no aparecen en las aportaciones del mensual ni del anual.
 5. **Antes de vender (Fase 5):** proveedor de precios con licencia comercial, política de privacidad/RGPD, planes con Stripe, y, si hace falta, cron con service role key para precios e informe automático.

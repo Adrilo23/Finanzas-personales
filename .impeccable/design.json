@@ -1,0 +1,543 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-05T20:41:50+00:00",
+  "title": "Design System: Finanzas",
+  "extensions": {
+    "colorMeta": {
+      "paper": {
+        "role": "neutral",
+        "displayName": "Papel",
+        "canonical": "oklch(0.982 0.003 85)",
+        "tonalRamp": [
+          "oklch(0.15 0.003 85)",
+          "oklch(0.26 0.003 85)",
+          "oklch(0.37 0.003 85)",
+          "oklch(0.48 0.003 85)",
+          "oklch(0.60 0.003 85)",
+          "oklch(0.72 0.003 85)",
+          "oklch(0.84 0.003 85)",
+          "oklch(0.95 0.003 85)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Tinta",
+        "canonical": "oklch(0.2 0.008 75)",
+        "tonalRamp": [
+          "oklch(0.15 0.008 75)",
+          "oklch(0.26 0.008 75)",
+          "oklch(0.37 0.008 75)",
+          "oklch(0.48 0.008 75)",
+          "oklch(0.60 0.008 75)",
+          "oklch(0.72 0.008 75)",
+          "oklch(0.84 0.008 75)",
+          "oklch(0.95 0.008 75)"
+        ]
+      },
+      "card-white": {
+        "role": "neutral",
+        "displayName": "Blanco tarjeta",
+        "canonical": "oklch(1 0 0)",
+        "tonalRamp": [
+          "oklch(0.15 0.000 0)",
+          "oklch(0.26 0.000 0)",
+          "oklch(0.37 0.000 0)",
+          "oklch(0.48 0.000 0)",
+          "oklch(0.60 0.000 0)",
+          "oklch(0.72 0.000 0)",
+          "oklch(0.84 0.000 0)",
+          "oklch(0.95 0.000 0)"
+        ]
+      },
+      "ink-button": {
+        "role": "primary",
+        "displayName": "Tinta de botón",
+        "canonical": "oklch(0.22 0.009 75)",
+        "tonalRamp": [
+          "oklch(0.15 0.009 75)",
+          "oklch(0.26 0.009 75)",
+          "oklch(0.37 0.009 75)",
+          "oklch(0.48 0.009 75)",
+          "oklch(0.60 0.009 75)",
+          "oklch(0.72 0.009 75)",
+          "oklch(0.84 0.009 75)",
+          "oklch(0.95 0.009 75)"
+        ]
+      },
+      "warm-mist": {
+        "role": "neutral",
+        "displayName": "Niebla cálida",
+        "canonical": "oklch(0.958 0.004 85)",
+        "tonalRamp": [
+          "oklch(0.15 0.004 85)",
+          "oklch(0.26 0.004 85)",
+          "oklch(0.37 0.004 85)",
+          "oklch(0.48 0.004 85)",
+          "oklch(0.60 0.004 85)",
+          "oklch(0.72 0.004 85)",
+          "oklch(0.84 0.004 85)",
+          "oklch(0.95 0.004 85)"
+        ]
+      },
+      "pencil-grey": {
+        "role": "neutral",
+        "displayName": "Lápiz",
+        "canonical": "oklch(0.5 0.01 75)",
+        "tonalRamp": [
+          "oklch(0.15 0.010 75)",
+          "oklch(0.26 0.010 75)",
+          "oklch(0.37 0.010 75)",
+          "oklch(0.48 0.010 75)",
+          "oklch(0.60 0.010 75)",
+          "oklch(0.72 0.010 75)",
+          "oklch(0.84 0.010 75)",
+          "oklch(0.95 0.010 75)"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Línea fina",
+        "canonical": "oklch(0.91 0.005 85)",
+        "tonalRamp": [
+          "oklch(0.15 0.005 85)",
+          "oklch(0.26 0.005 85)",
+          "oklch(0.37 0.005 85)",
+          "oklch(0.48 0.005 85)",
+          "oklch(0.60 0.005 85)",
+          "oklch(0.72 0.005 85)",
+          "oklch(0.84 0.005 85)",
+          "oklch(0.95 0.005 85)"
+        ]
+      },
+      "field-edge": {
+        "role": "neutral",
+        "displayName": "Borde de campo",
+        "canonical": "oklch(0.88 0.006 85)",
+        "tonalRamp": [
+          "oklch(0.15 0.006 85)",
+          "oklch(0.26 0.006 85)",
+          "oklch(0.37 0.006 85)",
+          "oklch(0.48 0.006 85)",
+          "oklch(0.60 0.006 85)",
+          "oklch(0.72 0.006 85)",
+          "oklch(0.84 0.006 85)",
+          "oklch(0.95 0.006 85)"
+        ]
+      },
+      "ledger-green": {
+        "role": "primary",
+        "displayName": "Verde libreta",
+        "canonical": "oklch(0.5 0.11 160)",
+        "tonalRamp": [
+          "oklch(0.15 0.110 160)",
+          "oklch(0.26 0.110 160)",
+          "oklch(0.37 0.110 160)",
+          "oklch(0.48 0.110 160)",
+          "oklch(0.60 0.110 160)",
+          "oklch(0.72 0.110 160)",
+          "oklch(0.84 0.088 160)",
+          "oklch(0.95 0.055 160)"
+        ]
+      },
+      "ledger-green-soft": {
+        "role": "primary",
+        "displayName": "Verde libreta suave",
+        "canonical": "oklch(0.95 0.03 160)",
+        "tonalRamp": [
+          "oklch(0.15 0.030 160)",
+          "oklch(0.26 0.030 160)",
+          "oklch(0.37 0.030 160)",
+          "oklch(0.48 0.030 160)",
+          "oklch(0.60 0.030 160)",
+          "oklch(0.72 0.030 160)",
+          "oklch(0.84 0.030 160)",
+          "oklch(0.95 0.030 160)"
+        ]
+      },
+      "focus-green": {
+        "role": "primary",
+        "displayName": "Verde de foco",
+        "canonical": "oklch(0.55 0.11 160)",
+        "tonalRamp": [
+          "oklch(0.15 0.110 160)",
+          "oklch(0.26 0.110 160)",
+          "oklch(0.37 0.110 160)",
+          "oklch(0.48 0.110 160)",
+          "oklch(0.60 0.110 160)",
+          "oklch(0.72 0.110 160)",
+          "oklch(0.84 0.088 160)",
+          "oklch(0.95 0.055 160)"
+        ]
+      },
+      "income-green": {
+        "role": "secondary",
+        "displayName": "Verde ingreso",
+        "canonical": "oklch(0.5 0.12 158)",
+        "tonalRamp": [
+          "oklch(0.15 0.120 158)",
+          "oklch(0.26 0.120 158)",
+          "oklch(0.37 0.120 158)",
+          "oklch(0.48 0.120 158)",
+          "oklch(0.60 0.120 158)",
+          "oklch(0.72 0.120 158)",
+          "oklch(0.84 0.088 158)",
+          "oklch(0.95 0.055 158)"
+        ]
+      },
+      "income-green-soft": {
+        "role": "secondary",
+        "displayName": "Verde ingreso suave",
+        "canonical": "oklch(0.955 0.035 158)",
+        "tonalRamp": [
+          "oklch(0.15 0.035 158)",
+          "oklch(0.26 0.035 158)",
+          "oklch(0.37 0.035 158)",
+          "oklch(0.48 0.035 158)",
+          "oklch(0.60 0.035 158)",
+          "oklch(0.72 0.035 158)",
+          "oklch(0.84 0.035 158)",
+          "oklch(0.95 0.035 158)"
+        ]
+      },
+      "expense-red": {
+        "role": "secondary",
+        "displayName": "Rojo gasto",
+        "canonical": "oklch(0.53 0.18 26)",
+        "tonalRamp": [
+          "oklch(0.15 0.180 26)",
+          "oklch(0.26 0.180 26)",
+          "oklch(0.37 0.180 26)",
+          "oklch(0.48 0.180 26)",
+          "oklch(0.60 0.160 26)",
+          "oklch(0.72 0.124 26)",
+          "oklch(0.84 0.088 26)",
+          "oklch(0.95 0.055 26)"
+        ]
+      },
+      "expense-red-soft": {
+        "role": "secondary",
+        "displayName": "Rojo gasto suave",
+        "canonical": "oklch(0.96 0.025 26)",
+        "tonalRamp": [
+          "oklch(0.15 0.025 26)",
+          "oklch(0.26 0.025 26)",
+          "oklch(0.37 0.025 26)",
+          "oklch(0.48 0.025 26)",
+          "oklch(0.60 0.025 26)",
+          "oklch(0.72 0.025 26)",
+          "oklch(0.84 0.025 26)",
+          "oklch(0.95 0.025 26)"
+        ]
+      },
+      "caution-amber": {
+        "role": "secondary",
+        "displayName": "Ámbar aviso",
+        "canonical": "oklch(0.6 0.13 65)",
+        "tonalRamp": [
+          "oklch(0.15 0.130 65)",
+          "oklch(0.26 0.130 65)",
+          "oklch(0.37 0.130 65)",
+          "oklch(0.48 0.130 65)",
+          "oklch(0.60 0.130 65)",
+          "oklch(0.72 0.124 65)",
+          "oklch(0.84 0.088 65)",
+          "oklch(0.95 0.055 65)"
+        ]
+      },
+      "caution-amber-soft": {
+        "role": "secondary",
+        "displayName": "Ámbar aviso suave",
+        "canonical": "oklch(0.96 0.04 80)",
+        "tonalRamp": [
+          "oklch(0.15 0.040 80)",
+          "oklch(0.26 0.040 80)",
+          "oklch(0.37 0.040 80)",
+          "oklch(0.48 0.040 80)",
+          "oklch(0.60 0.040 80)",
+          "oklch(0.72 0.040 80)",
+          "oklch(0.84 0.040 80)",
+          "oklch(0.95 0.040 80)"
+        ]
+      },
+      "invest-blue": {
+        "role": "tertiary",
+        "displayName": "Azul inversión",
+        "canonical": "oklch(0.52 0.14 255)",
+        "tonalRamp": [
+          "oklch(0.15 0.140 255)",
+          "oklch(0.26 0.140 255)",
+          "oklch(0.37 0.140 255)",
+          "oklch(0.48 0.140 255)",
+          "oklch(0.60 0.140 255)",
+          "oklch(0.72 0.124 255)",
+          "oklch(0.84 0.088 255)",
+          "oklch(0.95 0.055 255)"
+        ]
+      },
+      "invest-blue-soft": {
+        "role": "tertiary",
+        "displayName": "Azul inversión suave",
+        "canonical": "oklch(0.955 0.025 255)",
+        "tonalRamp": [
+          "oklch(0.15 0.025 255)",
+          "oklch(0.26 0.025 255)",
+          "oklch(0.37 0.025 255)",
+          "oklch(0.48 0.025 255)",
+          "oklch(0.60 0.025 255)",
+          "oklch(0.72 0.025 255)",
+          "oklch(0.84 0.025 255)",
+          "oklch(0.95 0.025 255)"
+        ]
+      },
+      "destructive-red": {
+        "role": "secondary",
+        "displayName": "Rojo destructivo",
+        "canonical": "oklch(0.55 0.19 27)",
+        "tonalRamp": [
+          "oklch(0.15 0.190 27)",
+          "oklch(0.26 0.190 27)",
+          "oklch(0.37 0.190 27)",
+          "oklch(0.48 0.190 27)",
+          "oklch(0.60 0.160 27)",
+          "oklch(0.72 0.124 27)",
+          "oklch(0.84 0.088 27)",
+          "oklch(0.95 0.055 27)"
+        ]
+      },
+      "chart-income": {
+        "role": "tertiary",
+        "displayName": "Gráfica: ingresos",
+        "canonical": "#13a06f",
+        "tonalRamp": []
+      },
+      "chart-invest": {
+        "role": "tertiary",
+        "displayName": "Gráfica: inversión",
+        "canonical": "#2a78d6",
+        "tonalRamp": []
+      },
+      "chart-expense": {
+        "role": "tertiary",
+        "displayName": "Gráfica: gastos",
+        "canonical": "#e34948",
+        "tonalRamp": []
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Solo el titular de la landing."
+      },
+      "headline": {
+        "displayName": "Titular de página",
+        "purpose": "Título de cada página (PageHeader)."
+      },
+      "title": {
+        "displayName": "Título",
+        "purpose": "Títulos de tarjeta y nombres en listas."
+      },
+      "body": {
+        "displayName": "Cuerpo",
+        "purpose": "Texto general; 16 px en campos móviles."
+      },
+      "label": {
+        "displayName": "Etiqueta",
+        "purpose": "Metadatos, etiquetas de campo y pestañas."
+      },
+      "amount": {
+        "displayName": "Importe",
+        "purpose": "Todos los importes, con cifras tabulares (Amount)."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card",
+        "value": "0 1px 2px oklch(0.4 0.02 75 / 0.05), 0 0 0 1px oklch(0.4 0.02 75 / 0.06)",
+        "purpose": "Toda superficie .surface en reposo."
+      },
+      {
+        "name": "pop",
+        "value": "0 12px 32px -8px oklch(0.3 0.02 75 / 0.18), 0 0 0 1px oklch(0.4 0.02 75 / 0.08)",
+        "purpose": "Diálogos, hojas, popovers y tooltips."
+      },
+      {
+        "name": "button-sheen",
+        "value": "inset 0 1px 0 oklch(1 0 0 / 0.12)",
+        "purpose": "Filo de luz del botón principal."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-strong",
+        "value": "cubic-bezier(0.23, 1, 0.32, 1)",
+        "purpose": "Entradas y animaciones de la landing (ink, settle, rise)."
+      },
+      {
+        "name": "ease-drawer",
+        "value": "cubic-bezier(0.32, 0.72, 0, 1)",
+        "purpose": "Hoja inferior de los diálogos en móvil (300 ms)."
+      },
+      {
+        "name": "press",
+        "value": "scale(0.97), 150ms ease-out",
+        "purpose": "Pulsación de botones."
+      },
+      {
+        "name": "ink",
+        "value": "620ms clip-path + opacity",
+        "purpose": "Renglones de la libreta de la landing; desactivado con reduced motion."
+      },
+      {
+        "name": "settle",
+        "value": "900ms opacity + blur + translateY",
+        "purpose": "Resumen de la libreta al asentarse; desactivado con reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botón principal",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Acción principal de cada pantalla: tinta sobre papel.",
+      "html": "<button class=\"ds-btn-primary\">Guardar movimiento</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;height:36px;padding:0 14px;border:1px solid transparent;border-radius:var(--radius,12px);background:var(--primary,oklch(0.22 0.009 75));color:var(--primary-foreground,oklch(0.985 0.002 85));font:500 14px/1 Geist,system-ui,sans-serif;box-shadow:inset 0 1px 0 oklch(1 0 0/0.12);cursor:pointer;transition:transform .15s ease-out,opacity .15s ease-out}.ds-btn-primary:hover{opacity:.88}.ds-btn-primary:active{transform:scale(.97)}.ds-btn-primary:focus-visible{outline:none;box-shadow:0 0 0 3px oklch(0.55 0.11 160/0.4)}"
+    },
+    {
+      "name": "Botón contorno",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Acción secundaria (Cancelar, Crear cuenta).",
+      "html": "<button class=\"ds-btn-outline\">Cancelar</button>",
+      "css": ".ds-btn-outline{height:36px;padding:0 14px;border:1px solid var(--input,oklch(0.88 0.006 85));border-radius:var(--radius,12px);background:var(--card,#fff);color:var(--foreground,oklch(0.2 0.008 75));font:500 14px/1 Geist,system-ui,sans-serif;cursor:pointer;transition:background .15s,transform .15s}.ds-btn-outline:hover{background:var(--muted,oklch(0.958 0.004 85))}.ds-btn-outline:active{transform:scale(.97)}.ds-btn-outline:focus-visible{outline:none;box-shadow:0 0 0 3px oklch(0.55 0.11 160/0.4)}"
+    },
+    {
+      "name": "Campo de importe",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Input con cifras tabulares y € a la derecha.",
+      "html": "<label class=\"ds-amount\"><input class=\"ds-input\" inputmode=\"decimal\" placeholder=\"0,00\"><span>€</span></label>",
+      "css": ".ds-amount{position:relative;display:block;width:260px}.ds-amount span{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted-foreground,oklch(0.5 0.01 75));font:14px Geist,system-ui,sans-serif}.ds-input{box-sizing:border-box;width:100%;height:40px;padding:4px 32px 4px 12px;border:1px solid var(--input,oklch(0.88 0.006 85));border-radius:var(--radius,12px);background:var(--card,#fff);color:var(--foreground,oklch(0.2 0.008 75));font:14px Geist,system-ui,sans-serif;font-variant-numeric:tabular-nums;box-shadow:0 1px 1px oklch(0.4 0.02 75/0.03);transition:border-color .15s,box-shadow .15s}.ds-input:focus-visible{outline:none;border-color:oklch(0.55 0.11 160);box-shadow:0 0 0 3px oklch(0.55 0.11 160/0.25)}"
+    },
+    {
+      "name": "Tarjeta (surface)",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Contenedor base: anillo fino y sombra tintada, sin borde gris.",
+      "html": "<div class=\"ds-card\"><p class=\"ds-card-title\">Balance del mes</p><p class=\"ds-card-big\">456,24 €</p></div>",
+      "css": ".ds-card{width:280px;padding:20px;border-radius:16.8px;background:var(--card,#fff);color:var(--card-foreground,oklch(0.2 0.008 75));box-shadow:0 1px 2px oklch(0.4 0.02 75/0.05),0 0 0 1px oklch(0.4 0.02 75/0.06);font-family:Geist,system-ui,sans-serif}.ds-card-title{margin:0;font-size:14px;color:var(--muted-foreground,oklch(0.5 0.01 75))}.ds-card-big{margin:4px 0 0;font-size:40px;font-weight:600;letter-spacing:-0.035em;font-variant-numeric:tabular-nums}"
+    },
+    {
+      "name": "Etiqueta de estado",
+      "kind": "chip",
+      "refersTo": "status-badge-warning",
+      "description": "Estado de presupuesto u objetivo: siempre icono + texto.",
+      "html": "<span class=\"ds-badge ds-badge-warn\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.25\"><path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\"/><path d=\"M12 9v4\"/><path d=\"M12 17h.01\"/></svg>Cerca del límite</span> <span class=\"ds-badge ds-badge-over\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.25\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 8v4\"/><path d=\"M12 16h.01\"/></svg>Superado</span>",
+      "css": ".ds-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border-radius:7.2px;font:500 11px/1.3 Geist,system-ui,sans-serif}.ds-badge-warn{background:var(--warning-soft,oklch(0.96 0.04 80));color:var(--warning,oklch(0.6 0.13 65))}.ds-badge-over{background:var(--negative-soft,oklch(0.96 0.025 26));color:var(--negative,oklch(0.53 0.18 26))}"
+    },
+    {
+      "name": "Barra de presupuesto",
+      "kind": "custom",
+      "refersTo": "status-badge-warning",
+      "description": "Progreso con el color del estado; la pista es niebla cálida.",
+      "html": "<div class=\"ds-bar\"><i style=\"width:85%\"></i></div>",
+      "css": ".ds-bar{width:260px;height:6px;border-radius:999px;background:var(--muted,oklch(0.958 0.004 85));overflow:hidden}.ds-bar i{display:block;height:100%;border-radius:999px;background:var(--warning,oklch(0.6 0.13 65))}"
+    },
+    {
+      "name": "Importe",
+      "kind": "custom",
+      "refersTo": "amount",
+      "description": "Única forma de pintar dinero: cifras tabulares, signo y color semántico.",
+      "html": "<div class=\"ds-amounts\"><span class=\"ds-amt ds-pos\">+1850,00 €</span><span class=\"ds-amt\">-750,00 €</span><span class=\"ds-amt\">96,34 €</span></div>",
+      "css": ".ds-amounts{display:grid;gap:6px;justify-items:end;width:140px;font-family:Geist,system-ui,sans-serif}.ds-amt{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-0.01em;color:var(--foreground,oklch(0.2 0.008 75))}.ds-pos{color:var(--positive,oklch(0.5 0.12 158))}"
+    },
+    {
+      "name": "Barra inferior",
+      "kind": "nav",
+      "refersTo": "nav-tab-active",
+      "description": "Navegación móvil: cinco pestañas, la activa con píldora verde suave.",
+      "html": "<nav class=\"ds-tabbar\"><a class=\"ds-tab ds-tab-on\"><span>⌂</span>Inicio</a><a class=\"ds-tab\"><span>⇄</span>Movim.</a><a class=\"ds-tab\"><span>▭</span>Cuentas</a><a class=\"ds-tab\"><span>◔</span>Presup.</a><a class=\"ds-tab\"><span>⋯</span>Más</a></nav>",
+      "css": ".ds-tabbar{display:grid;grid-template-columns:repeat(5,1fr);width:360px;padding:6px 0;border-top:1px solid oklch(0.91 0.005 85/0.7);background:oklch(0.982 0.003 85/0.85);font:500 11px Geist,system-ui,sans-serif}.ds-tab{display:grid;justify-items:center;gap:2px;color:var(--muted-foreground,oklch(0.5 0.01 75));text-decoration:none;cursor:pointer}.ds-tab span{display:grid;place-items:center;width:44px;height:28px;border-radius:999px;font-size:16px;transition:background .2s}.ds-tab:hover{color:var(--foreground,oklch(0.2 0.008 75))}.ds-tab-on{color:var(--foreground,oklch(0.2 0.008 75))}.ds-tab-on span{background:var(--brand-soft,oklch(0.95 0.03 160));color:var(--brand,oklch(0.5 0.11 160))}"
+    }
+  ],
+  "narrative": {
+    "northStar": "La libreta de cuentas",
+    "overview": "Finanzas es la libreta de gastos de casa convertida en app: papel cálido, tinta oscura y números que cuadran. La interfaz se aparta para que manden los importes. Neutros cálidos (tono ~85) en lugar de grises fríos, un único acento verde para la marca y el foco, y tres colores semánticos que solo hablan de dinero: verde para lo que entra, rojo para lo que sale y azul para lo que se invierte.\n\nLa densidad es la de una herramienta que se abre a diario en el móvil: tarjetas con aire, una lista por bloque y como mucho una cifra grande por pantalla. El sistema prefiere el orden de un buen libro de cuentas (columnas alineadas, cifras tabulares, separadores finos) a la decoración. Lo único que se mueve con intención es la propia libreta de la landing, que se escribe y cuadra una sola vez.\n\nLa app sigue el modo claro u oscuro del sistema operativo, sin interruptor propio. En oscuro, el papel pasa a un marrón casi negro y los colores semánticos se aclaran, pero conservan su papel.",
+    "keyCharacteristics": [
+      "Papel cálido y tinta oscura; nunca gris azulado.",
+      "Un solo acento de marca (verde libreta), escaso y funcional.",
+      "Los importes son el contenido: cifras tabulares, signo explícito y color semántico.",
+      "El color nunca va solo: siempre con icono y texto.",
+      "Tarjetas con anillo fino y sombra tintada, sin bordes grises genéricos.",
+      "Móvil primero: barra inferior de pestañas y diálogos como hojas que suben desde abajo."
+    ],
+    "rules": [
+      {
+        "name": "The Money-Only Color Rule",
+        "body": "Verde, rojo, ámbar y azul significan dinero (entra, sale, aviso, invertido). No se usan para decorar ni para destacar algo que no sea un importe o su estado.",
+        "section": "colors"
+      },
+      {
+        "name": "The Never-Alone Rule",
+        "body": "Ningún estado se comunica solo con color. Una etiqueta lleva icono y texto («⚠ Cerca del límite»), un importe positivo lleva «+» además del verde.",
+        "section": "colors"
+      },
+      {
+        "name": "The Chart Order Rule",
+        "body": "Las series de la gráfica van siempre en el orden ingresos → inversión → gastos. Es el orden validado para daltonismo; no se reordenan ni se recolorean.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Figures Rule",
+        "body": "Todo importe se pinta con cifras tabulares (`.num` o `Amount`), para que las columnas cuadren como en un libro de cuentas.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Big Number Rule",
+        "body": "Como mucho una cifra grande por pantalla o tarjeta (el balance, lo disponible). El resto de importes van a tamaño de título.",
+        "section": "typography"
+      },
+      {
+        "name": "The Never-Truncate-Money Rule",
+        "body": "Un importe, una fecha de vencimiento o una etiqueta de datos de ejemplo nunca se recortan con «…». Si no cabe, se reorganiza la fila.",
+        "section": "layout"
+      },
+      {
+        "name": "The Tinted-Shadow Rule",
+        "body": "Las sombras van tintadas del mismo tono cálido que el papel (oklch 75). Nunca sombras negras puras en modo claro.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** pinta todo importe con `Amount` (cifras tabulares, «+» y color semántico con `signed`).",
+      "**Do** acompaña cada estado de color con icono y texto (`BudgetStatusBadge`, `GoalStatusBadge`).",
+      "**Do** usa `.surface` para las tarjetas: anillo y sombra tintada, 16,8 px de radio.",
+      "**Do** usa `ConfirmDialog` para confirmar borrados y `Dialog` para formularios (hoja en móvil, modal desde `sm`).",
+      "**Do** etiqueta siempre los datos de ejemplo como tales, en la landing y en la demo.",
+      "**Do** desactiva las animaciones con `prefers-reduced-motion`.",
+      "**Do** mantén las series de la gráfica en el orden ingresos → inversión → gastos y el eje Y con marcas redondas (`niceAxis`)."
+    ],
+    "donts": [
+      "**Don't** uses verde, rojo, ámbar o azul para decorar; son colores de dinero.",
+      "**Don't** uses `window.confirm` ni diálogos nativos del navegador.",
+      "**Don't** pongas bordes grises genéricos en las tarjetas ni sombras negras puras en modo claro.",
+      "**Don't** recortes con «…» un importe, una fecha de vencimiento o la etiqueta de datos de ejemplo.",
+      "**Don't** añadas texturas de papel, inclinaciones ni testimonios o cifras inventadas; la libreta se dibuja con las piezas reales de la app.",
+      "**Don't** introduzcas un segundo color de acento ni otra familia tipográfica."
+    ]
+  }
+}
