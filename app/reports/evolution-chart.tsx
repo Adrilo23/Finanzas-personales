@@ -11,7 +11,9 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { useSyncExternalStore } from 'react'
 import type { MonthlyPoint } from '@/lib/reports'
+import { niceAxis } from '@/lib/chart-axis'
 
 // Sirve para la vista mensual y la anual (`month` es la etiqueta del punto).
 // Orden validado para daltonismo: ingresos → inversión → gastos (barras contiguas).
@@ -23,6 +25,21 @@ const SERIES = [
 
 const euro = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' })
 const compact = new Intl.NumberFormat('es-ES', { notation: 'compact', maximumFractionDigits: 1 })
+
+const NARROW = '(max-width: 639px)'
+function subscribeNarrow(onChange: () => void) {
+  const mq = window.matchMedia(NARROW)
+  mq.addEventListener('change', onChange)
+  return () => mq.removeEventListener('change', onChange)
+}
+/** Por debajo de `sm`, para espaciar las etiquetas del eje X. */
+function useNarrow() {
+  return useSyncExternalStore(
+    subscribeNarrow,
+    () => window.matchMedia(NARROW).matches,
+    () => false
+  )
+}
 
 type ChartTooltipProps = {
   active?: boolean
@@ -59,10 +76,14 @@ function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
 }
 
 export function EvolutionChart({ data, title }: { data: MonthlyPoint[]; title: string }) {
+  const narrow = useNarrow()
+  const axis = niceAxis(data.flatMap((p) => [p.ingresos, p.inversion, p.gastos, p.balance]))
   return (
     <figure className="surface p-4 sm:p-6">
       <figcaption className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
-        <span className="text-[0.9375rem] font-semibold">{title}</span>
+        <span className="text-[0.9375rem] font-semibold">
+          {title} <span className="font-normal text-muted-foreground">· en €</span>
+        </span>
         <ul className="flex flex-wrap gap-x-4 gap-y-1 text-[0.8125rem] text-muted-foreground">
           {SERIES.map((s) => (
             <li key={s.key} className="flex items-center gap-1.5">
@@ -79,24 +100,27 @@ export function EvolutionChart({ data, title }: { data: MonthlyPoint[]; title: s
 
       <div className="-mx-2 h-72 sm:mx-0 sm:h-80">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }} barGap={2}>
+          <ComposedChart data={data} margin={{ top: 10, right: 4, left: 0, bottom: 0 }} barGap={2}>
             <CartesianGrid vertical={false} stroke="var(--chart-grid)" />
             <XAxis
               dataKey="month"
               tickLine={false}
               axisLine={false}
               tickMargin={10}
-              interval="preserveStartEnd"
-              minTickGap={8}
+              // En móvil, un mes sí y otro no, para que el hueco entre etiquetas sea regular.
+              interval={narrow && data.length > 6 ? 1 : 0}
               tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
               tickFormatter={(value: string) => value.replace('.', '')}
             />
             <YAxis
               tickLine={false}
               axisLine={false}
-              width={52}
+              width={48}
+              domain={axis.domain}
+              ticks={axis.ticks}
+              allowDataOverflow
               tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
-              tickFormatter={(value: number) => `${compact.format(value)} €`}
+              tickFormatter={(value: number) => compact.format(value)}
             />
             <ReferenceLine y={0} stroke="var(--border)" />
             <Tooltip

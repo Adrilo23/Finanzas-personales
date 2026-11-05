@@ -14,6 +14,7 @@ import { getBudgetProgress } from '@/lib/budgets'
 import { getGoals } from '@/lib/goals'
 import { computeFirstSteps } from '@/lib/onboarding'
 import { FirstSteps } from './first-steps'
+import { Landing } from './landing'
 import { GoalStatusBadge, goalBarStatus } from '@/components/goal-status'
 import { NewAccountDialog } from '@/app/accounts/new-account-dialog'
 import { NewTransactionDialog } from '@/app/transactions/new-transaction-dialog'
@@ -50,10 +51,9 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) {
-    // proxy.ts ya debería haber redirigido antes de llegar aquí; esto es solo un cinturón de seguridad.
-    return null
-  }
+  // Sin sesión, «/» es la landing pública (proxy.ts deja pasar esta ruta).
+  if (!user) return <Landing />
+
 
   const now = new Date()
   const monthStart = format(startOfMonth(now), 'yyyy-MM-dd')

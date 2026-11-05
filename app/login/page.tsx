@@ -85,6 +85,13 @@ export default function LoginPage() {
         >
           Cómo instalarla en el móvil
         </Link>
+        {' · '}
+        <Link
+          href="/demo"
+          className="font-medium text-foreground underline-offset-4 hover:underline"
+        >
+          Probar la demo
+        </Link>
       </p>
     </AuthShell>
   )
