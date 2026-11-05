@@ -4,9 +4,9 @@
 >
 > **Fuente de verdad:** este archivo del repo (GitHub `Adrilo23/Finanzas-personales`). Claude Code lo actualiza al terminar cada tarea, en el mismo commit que el código.
 
-## Estado actual: 🟢 Fases 1, 3, 3b y 3c completas, con tests y CI (la actualización programada de precios y el envío automático del informe quedan aparcados, ver notas). Gráfica anual, informe anual con PDF, informe mensual por email, objetivos vinculados a una cuenta y conversión de inversiones antiguas a traspaso hechos. Migraciones 0001-0013 aplicadas en remoto; CLI de Supabase fijada (`supabase@3.0.0` en devDependencies). Siguiente: ayudas contextuales "?" o modo demo + landing (Fase 4)
+## Estado actual: 🟢 Fases 1, 3, 3b y 3c completas, con tests y CI, y en producción (PR #3, #4 y #5 fusionados el 2026-11-03). La actualización programada de precios y el envío automático del informe quedan aparcados (ver notas). Auditoría de seguridad atendida. Migraciones 0001-0014 aplicadas en remoto; email del informe configurado con Resend. Ayuda para nuevos usuarios hecha salvo el modo demo. Siguiente: modo demo + landing (Fase 4)
 
-Última actualización: 2026-11-03
+Última actualización: 2026-11-05
 
 Leyenda: `[x]` hecho · `[~]` hecho en parte (ver nota) · `[ ]` pendiente
 
@@ -18,7 +18,7 @@ Leyenda: `[x]` hecho · `[~]` hecho en parte (ver nota) · `[ ]` pendiente
 - [x] Diseñar modelo de datos inicial
 - [x] Crear repositorio en GitHub — `Adrilo23/Finanzas-personales`
 - [x] Crear proyecto en Supabase (gratuito) — enlazado con la CLI (`kwouosaoaeydipzavjdr`)
-- [ ] Crear proyecto en Vercel y conectar con GitHub — sin confirmar; no hay configuración de Vercel en el repo
+- [x] Crear proyecto en Vercel y conectar con GitHub — `adrilo24/finanzas-personales`; cada merge a `main` despliega producción y cada PR tiene vista previa. Variables en Vercel: las de Supabase y `RESEND_API_KEY`
 - [x] Scaffold inicial de Next.js + Tailwind + shadcn/ui — Next 16, Tailwind 4
 
 ## Fase 1 — MVP funcional (uso personal) ✅
@@ -97,16 +97,16 @@ Idea surgida al usar la app: una cuenta como MyInvestor contiene fondos cuyo val
   - Resumen de objetivos en el inicio (los que van con retraso, primero)
 - [x] **Informe mensual** (`/reports/monthly?month=yyyy-MM`, enlazado desde Evolución): totales y balance del mes con tasa de ahorro y comparación con el mes anterior, gasto por categoría, mayores gastos, estado de presupuestos y aportaciones a objetivos. Se descarga como **PDF** (`/reports/monthly/export`, `lib/monthly-report-pdf.ts`). Cálculo puro y testeado en `lib/monthly-report.ts`
   - Los presupuestos no guardan histórico: un mes pasado se compara con los límites actuales
-  - [x] **Envío por email** (botón «Envíamelo»): resumen en el cuerpo y el PDF adjunto, siempre al correo de la sesión. Resend por su API REST (`lib/email.ts`, interfaz `EmailProvider`), con `RESEND_API_KEY` y `EMAIL_FROM`. **Falta configurarlo:** crear la cuenta de Resend y poner las variables en Vercel; para enviar a otros correos que no sean el de la cuenta de Resend hace falta verificar un dominio
+  - [x] **Envío por email** (botón «Envíamelo»): resumen en el cuerpo y el PDF adjunto, siempre al correo de la sesión. Resend por su API REST (`lib/email.ts`, interfaz `EmailProvider`), con `RESEND_API_KEY` y `EMAIL_FROM`. Configurado y probado en producción (2026-11-04) con el remitente de pruebas de Resend, que solo envía al correo de la cuenta de Resend. **Para que lo usen otros:** verificar un dominio propio en Resend y poner `EMAIL_FROM` (va con «Despliegue estable en dominio propio»)
   - Aparcado: envío automático cada mes. Necesita cron y service role key (leer datos sin sesión), la misma excepción que la actualización programada de precios
 - [x] **Informe anual** (`/reports/annual?year=yyyy`, enlazado desde Evolución): totales, balance y tasa de ahorro frente al año anterior, mes a mes, gasto por categoría comparado con el año anterior, mayores gastos y aportaciones a objetivos; PDF en `/reports/annual/export`. El año en curso se compara con el **mismo periodo** del anterior (1 ene – hoy). Cálculo puro y testeado en `lib/annual-report.ts`
 
 ## Fase 4 — Pulido y preparación para portfolio/LinkedIn
 - [x] Diseño UI cuidado (no solo funcional) — rediseño completo: sistema de tokens (modo claro/oscuro), navegación con barra inferior en móvil, formularios nuevos, estados vacíos y de carga, gráfica accesible
-- [ ] Ayuda para nuevos usuarios (prioritaria: la usarán familia y amigos y el objetivo es venderla)
+- [~] Ayuda para nuevos usuarios (prioritaria: la usarán familia y amigos y el objetivo es venderla) — hecha salvo el modo demo
   - [x] Lista de primeros pasos en el inicio que se marca sola según el uso (cuenta, movimiento, presupuesto, recurrente, objetivo, instalar en el móvil); se puede ocultar (queda en el navegador) y desaparece al completarla. El paso de instalar lo marca el cliente (`useInstallState`): hecho si la app se abre como instalada o se instaló desde este navegador
   - [x] Página de ayuda `/help` (pública, para seguir la guía antes de registrarse; enlazada desde el login, el menú de usuario y «Más»): 9 preguntas frecuentes (importe en positivo, tipos de movimiento, convertir inversiones antiguas, recurrentes, subcategorías en presupuestos, corregir/borrar, inversiones y precios, objetivos, sin conexión) y guía de instalación para iPhone/iPad, Android y ordenador que se abre en la del dispositivo detectado (`lib/install.ts`), con botón «Instalar» donde el navegador lo permite (Chrome/Edge). Pendiente: probarla en un iPhone y un Android reales
-  - [ ] Ayudas contextuales "?" solo en los puntos confusos: importe en positivo, gasto/inversión/transferencia, recurrentes generados al abrir la app, subcategorías que suman al padre
+  - [x] Ayudas contextuales "?" solo en los puntos confusos (2026-11-05): importe en positivo y tipos de movimiento (diálogo de movimiento), recurrentes generados al abrir la app (Recurrentes) y subcategorías que suman al padre (Presupuestos). Componente `HelpHint` (`components/help-hint.tsx`, popover de Radix): explicación corta y enlace a su pregunta en `/help`
   - [ ] Modo demo con datos de ejemplo ("Probar sin registrarme"), junto con la landing
 - [ ] Landing page del producto
 - [~] Documentación técnica del proyecto — `CLAUDE.md` describe la arquitectura; **falta la documentación pública**

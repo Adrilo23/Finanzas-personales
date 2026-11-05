@@ -20,6 +20,7 @@ import { AmountInput } from '@/components/ui/amount-input'
 import { Segmented } from '@/components/ui/segmented'
 import { Field, FieldError, FormError } from '@/components/ui/field'
 import { CATEGORY_TYPE_META, isCategoryType, type CategoryType } from '@/components/category-type'
+import { HelpHint } from '@/components/help-hint'
 import {
   Dialog,
   DialogClose,
@@ -105,13 +106,29 @@ export function NewTransactionDialog({
   // convertirlo en traspaso; al editar un traspaso no se muestra el selector.
   const options = transaction ? MOVEMENT_OPTIONS : transfer ? null : ALL_OPTIONS
   const selector = options && (
-    <Segmented
-      name="kind"
-      aria-label="Tipo de movimiento"
-      value={kind}
-      onValueChange={setKind}
-      options={options}
-    />
+    <div className="flex items-center gap-2">
+      <Segmented
+        name="kind"
+        aria-label="Tipo de movimiento"
+        value={kind}
+        onValueChange={setKind}
+        options={options}
+        className="flex-1"
+      />
+      <HelpHint label="tipos de movimiento" helpId="tipos-movimiento">
+        <p>
+          <strong>Gasto</strong>: dinero que se va. <strong>Ingreso</strong>: dinero que entra.
+        </p>
+        <p>
+          <strong>Inversión</strong>: sale hacia algo que no llevas en la app; cuenta aparte de
+          los gastos.
+        </p>
+        <p>
+          <strong>Traspaso</strong>: de una cuenta tuya a otra (p. ej. del banco al bróker). Mueve
+          saldos, pero no es ingreso ni gasto.
+        </p>
+      </HelpHint>
+    </div>
   )
 
   return (
@@ -152,6 +169,18 @@ export function NewTransactionDialog({
             {kind === 'transfer'
               ? 'Mueve dinero entre tus cuentas. No cuenta como ingreso ni como gasto.'
               : 'Escribe el importe en positivo: el signo lo pone el tipo.'}
+            {kind !== 'transfer' && (
+              <>
+                {' '}
+                <HelpHint label="importe en positivo" helpId="importe-positivo">
+                  <p>
+                    No hace falta poner el menos: un gasto siempre resta y un ingreso siempre suma,
+                    según la categoría que elijas.
+                  </p>
+                  <p>Si te equivocas de tipo, edita el movimiento y el signo se corrige solo.</p>
+                </HelpHint>
+              </>
+            )}
           </DialogDescription>
         </DialogHeader>
 

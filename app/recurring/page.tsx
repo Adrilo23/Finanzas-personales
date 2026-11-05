@@ -5,6 +5,7 @@ import { FREQUENCY_LABELS, type RecurringInput } from '@/lib/validation/recurrin
 import { formatShortDate } from '@/lib/format'
 import { applyCategorySign, formatCents } from '@/lib/money'
 import { PageHeader, PageShell } from '@/components/page-header'
+import { HelpHint } from '@/components/help-hint'
 import { EmptyState } from '@/components/empty-state'
 import { Amount } from '@/components/amount'
 import { CategoryBadge, TransferBadge, type CategoryType } from '@/components/category-type'
@@ -87,7 +88,18 @@ export default async function RecurringPage() {
     <PageShell>
       <PageHeader
         title="Recurrentes"
-        description="Nóminas, alquileres, suscripciones o traspasos que se registran solos en su fecha."
+        description={
+          <>
+            Nóminas, alquileres, suscripciones o traspasos que se registran solos en su fecha.{' '}
+            <HelpHint label="cuándo se generan" helpId="recurrentes">
+              <p>
+                Se crean <strong>al abrir la app</strong>, no a una hora fija: si llevas días sin
+                entrar, al volver aparecen todos los que tocaban, cada uno con su fecha.
+              </p>
+              <p>Editar una regla solo cambia los próximos; los ya creados se editan aparte.</p>
+            </HelpHint>
+          </>
+        }
         actions={
           <NewRecurringDialog
             accounts={accounts ?? []}
