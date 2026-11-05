@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "roboto",
+        "createdAt": "2026-11-05T20:44:31.969Z",
+        "reason": "Claude: HTML del email del informe mensual (lib/monthly-report-email.ts); los clientes de correo no cargan Geist, así que usa una pila de fuentes del sistema"
+      }
+    ]
+  }
+}
