@@ -3,8 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { SESSION_COOKIE_OPTIONS, withSessionFlags } from '@/lib/supabase/cookie-options'
 import { buildCsp } from '@/lib/security-headers'
 
-// /help es pública para poder seguir la guía de instalación antes de registrarse.
-const PUBLIC_PATHS = ['/login', '/register', '/auth/callback', '/offline', '/help']
+import { isPublicPath } from '@/lib/public-paths'
 
 export async function proxy(request: NextRequest) {
   // CSP con nonce por petición: Next lo lee de la cabecera de la petición y lo pone en
@@ -49,9 +48,7 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const isPublicPath = PUBLIC_PATHS.some((path) => request.nextUrl.pathname.startsWith(path))
-
-  if (!user && !isPublicPath) {
+  if (!user && !isPublicPath(request.nextUrl.pathname)) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)

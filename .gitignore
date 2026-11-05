@@ -49,3 +49,8 @@ skills-lock.json
 
 .vercel
 .env*
+
+# Impeccable: capturas de revisión y estado local
+.impeccable/review/
+.impeccable/config.local.json
+.impeccable/hook.cache.json

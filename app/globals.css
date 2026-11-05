@@ -206,6 +206,53 @@
   }
 }
 
+/*
+ * Landing, «la libreta de cuentas»: cada apunte se escribe en su renglón (se
+ * descubre de izquierda a derecha, como la tinta) y la suma cristaliza en el
+ * resumen de la app. Un único momento al cargar, no un efecto por sección.
+ */
+@layer utilities {
+  .animate-ink {
+    animation: ink 620ms var(--ease-out-strong) both;
+  }
+  .animate-settle {
+    animation: settle 900ms var(--ease-out-strong) both;
+  }
+}
+
+@keyframes ink {
+  from {
+    clip-path: inset(0 100% 0 0);
+    opacity: 0.35;
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+}
+
+@keyframes settle {
+  from {
+    opacity: 0;
+    filter: blur(8px);
+    transform: translateY(8px) scale(0.985);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-ink,
+  .animate-settle {
+    animation: none;
+  }
+}
+
+/* La libreta de la landing espera a estar en pantalla (components/reveal-on-view.tsx). */
+@media (scripting: enabled) {
+  [data-reveal]:not([data-inview]) :is(.animate-ink, .animate-settle) {
+    animation-play-state: paused;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-rise {
     animation: fade 200ms ease both;

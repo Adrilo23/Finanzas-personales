@@ -4,7 +4,7 @@
 >
 > **Fuente de verdad:** este archivo del repo (GitHub `Adrilo23/Finanzas-personales`). Claude Code lo actualiza al terminar cada tarea, en el mismo commit que el código.
 
-## Estado actual: 🟢 Fases 1, 3, 3b y 3c completas, con tests y CI, y en producción (PR #3, #4 y #5 fusionados el 2026-11-03). La actualización programada de precios y el envío automático del informe quedan aparcados (ver notas). Auditoría de seguridad atendida. Migraciones 0001-0014 aplicadas en remoto; email del informe configurado con Resend. Ayuda para nuevos usuarios hecha salvo el modo demo. Siguiente: modo demo + landing (Fase 4)
+## Estado actual: 🟢 Fases 1, 3, 3b y 3c completas, con tests y CI, y en producción (PR #3, #4 y #5 fusionados el 2026-11-03). La actualización programada de precios y el envío automático del informe quedan aparcados (ver notas). Auditoría de seguridad atendida. Migraciones 0001-0014 aplicadas en remoto; email del informe configurado con Resend. Ayuda para nuevos usuarios, landing y demo hechas. Siguiente: decidir el nombre del producto y el dominio propio (Fase 4)
 
 Última actualización: 2026-11-05
 
@@ -103,12 +103,13 @@ Idea surgida al usar la app: una cuenta como MyInvestor contiene fondos cuyo val
 
 ## Fase 4 — Pulido y preparación para portfolio/LinkedIn
 - [x] Diseño UI cuidado (no solo funcional) — rediseño completo: sistema de tokens (modo claro/oscuro), navegación con barra inferior en móvil, formularios nuevos, estados vacíos y de carga, gráfica accesible
-- [~] Ayuda para nuevos usuarios (prioritaria: la usarán familia y amigos y el objetivo es venderla) — hecha salvo el modo demo
+- [x] Ayuda para nuevos usuarios (prioritaria: la usarán familia y amigos y el objetivo es venderla)
   - [x] Lista de primeros pasos en el inicio que se marca sola según el uso (cuenta, movimiento, presupuesto, recurrente, objetivo, instalar en el móvil); se puede ocultar (queda en el navegador) y desaparece al completarla. El paso de instalar lo marca el cliente (`useInstallState`): hecho si la app se abre como instalada o se instaló desde este navegador
   - [x] Página de ayuda `/help` (pública, para seguir la guía antes de registrarse; enlazada desde el login, el menú de usuario y «Más»): 9 preguntas frecuentes (importe en positivo, tipos de movimiento, convertir inversiones antiguas, recurrentes, subcategorías en presupuestos, corregir/borrar, inversiones y precios, objetivos, sin conexión) y guía de instalación para iPhone/iPad, Android y ordenador que se abre en la del dispositivo detectado (`lib/install.ts`), con botón «Instalar» donde el navegador lo permite (Chrome/Edge). Pendiente: probarla en un iPhone y un Android reales
   - [x] Ayudas contextuales "?" solo en los puntos confusos (2026-11-05): importe en positivo y tipos de movimiento (diálogo de movimiento), recurrentes generados al abrir la app (Recurrentes) y subcategorías que suman al padre (Presupuestos). Componente `HelpHint` (`components/help-hint.tsx`, popover de Radix): explicación corta y enlace a su pregunta en `/help`
-  - [ ] Modo demo con datos de ejemplo ("Probar sin registrarme"), junto con la landing
-- [ ] Landing page del producto
+  - [x] Modo demo con datos de ejemplo ("Probar sin registrarme") (2026-11-05): `/demo`, pública y de **solo lectura, sin base de datos** (decisión 2026-11-05: frente a un usuario anónimo propio o una cuenta compartida). Es el inicio de la app con un año de apuntes de ejemplo (`lib/demo-data.ts`) calculado con las mismas funciones que la app; muestra el último mes completo. Enlazada desde la landing y el login
+- [x] Landing page del producto (2026-11-05): en `/` para quien no tiene sesión. Estructura «la libreta de cuentas»: cuatro apuntes que se escriben en una libreta y cuya suma se convierte en el resumen de la app; después presupuestos, objetivos, evolución e informe con piezas reales de la app, la postura sobre los datos («Tu banco no se entera»), instalación y cierre. Mensajes confirmados: sin conectar el banco, sin anuncios, gratis. Contexto de producto en `PRODUCT.md`
+  - Pendiente: decidir el nombre del producto (provisional «Finanzas»)
 - [~] Documentación técnica del proyecto — `CLAUDE.md` describe la arquitectura; **falta la documentación pública**
 - [ ] Despliegue estable en dominio propio
 
