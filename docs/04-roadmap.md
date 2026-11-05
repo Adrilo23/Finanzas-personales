@@ -43,14 +43,14 @@ Objetivo: poder llevar mis propias cuentas reales, aunque sea con UI básica.
   - F-08: limitador de intentos de login en la BD (5 por IP+email y 30 por IP cada 15 min) y mensaje de error uniforme
   - Observaciones de fase 2: los `delete*` distinguen «0 filas» de éxito; las políticas RLS exigen que cada FK sea del usuario (antes se podía crear un adjunto propio apuntando al movimiento y la ruta de otro); bucket de adjuntos limitado a imágenes/PDF de 10 MB
   - F-07 (traspaso sin saldo suficiente): **no se bloquea**, ver Decisiones
-- [x] Hojas de formulario en móvil (2026-11-05, PR #11): en Android (Chrome) y iOS el teclado tapaba la hoja inferior desde la categoría y no se llegaba a «Guardar». `DialogContent` mide el teclado con `visualViewport` (`components/use-keyboard-inset.ts`), se coloca encima, ajusta su alto y lleva a la vista el campo enfocado. No se usa `interactive-widget=resizes-content` porque subiría también la barra de pestañas en todas las páginas. Pendiente: confirmarlo en un móvil real
+- [x] Hojas de formulario en móvil (2026-11-05, PR #11): en Android (Chrome) y iOS el teclado tapaba la hoja inferior desde la categoría y no se llegaba a «Guardar». `DialogContent` mide el teclado con `visualViewport` (`components/use-keyboard-inset.ts`), se coloca encima, ajusta su alto y lleva a la vista el campo enfocado. No se usa `interactive-widget=resizes-content` porque subiría también la barra de pestañas en todas las páginas. Comprobado en móvil real (2026-11-05)
 - [x] Gráfica de evolución (2026-11-05, PR #8): eje Y con marcas redondas (`niceAxis`, `lib/chart-axis.ts`, con tests), «€» una vez en el título, sin exagerar los negativos pequeños y un mes sí y otro no en móvil
 - [ ] Recurrentes en móvil: la línea «Mensual · Banco · próxima el …» se corta en «próxi…» porque los tres botones (editar, pausar, borrar) se comen el ancho. Propuesta: en móvil, llevar las acciones a un menú «⋯»
 - [x] Recurrentes mensuales en día 29-31: antes, al pasar por un mes corto, bajaban a 28 y se quedaban ahí. Arreglado con `anchor_day` (migración `0006`): cada vencimiento vuelve al día original. Las reglas que ya hubieran derivado antes del arreglo se quedan en el día en que estaban
 
 ## Fase 2 — PWA y multiplataforma
 - [x] Configurar manifest y service worker (instalable en móvil) — Serwist (`app/sw.ts`, `app/manifest.ts`)
-- [ ] Probar instalación en Android/iOS
+- [x] Probar instalación en Android/iOS — probado por Adrián en móviles reales (2026-11-05)
 - [ ] Empaquetar con Tauri para escritorio (Windows/Mac)
 - [~] Modo offline básico — se pueden leer las páginas ya visitadas y hay una página `/offline`; **falta registrar sin conexión y sincronizar después**
 
@@ -109,7 +109,7 @@ Idea surgida al usar la app: una cuenta como MyInvestor contiene fondos cuyo val
 - [x] Diseño UI cuidado (no solo funcional) — rediseño completo: sistema de tokens (modo claro/oscuro), navegación con barra inferior en móvil, formularios nuevos, estados vacíos y de carga, gráfica accesible
 - [x] Ayuda para nuevos usuarios (prioritaria: la usarán familia y amigos y el objetivo es venderla)
   - [x] Lista de primeros pasos en el inicio que se marca sola según el uso (cuenta, movimiento, presupuesto, recurrente, objetivo, instalar en el móvil); se puede ocultar (queda en el navegador) y desaparece al completarla. El paso de instalar no sale en ordenador (se decide por el user agent en el servidor) y, al abrir la app instalada, se guarda `pwa_installed` en `user_metadata` (`markAppInstalled`), así que queda hecho en todos los dispositivos (2026-11-05, PR #10; antes solo lo sabía el navegador donde se instaló). En iPad, que se presenta como Mac, tampoco sale
-  - [x] Página de ayuda `/help` (pública, para seguir la guía antes de registrarse; enlazada desde el login, el menú de usuario y «Más»): 9 preguntas frecuentes (importe en positivo, tipos de movimiento, convertir inversiones antiguas, recurrentes, subcategorías en presupuestos, corregir/borrar, inversiones y precios, objetivos, sin conexión) y guía de instalación para iPhone/iPad, Android y ordenador que se abre en la del dispositivo detectado (`lib/install.ts`), con botón «Instalar» donde el navegador lo permite (Chrome/Edge). Pendiente: probarla en un iPhone y un Android reales
+  - [x] Página de ayuda `/help` (pública, para seguir la guía antes de registrarse; enlazada desde el login, el menú de usuario y «Más»): 9 preguntas frecuentes (importe en positivo, tipos de movimiento, convertir inversiones antiguas, recurrentes, subcategorías en presupuestos, corregir/borrar, inversiones y precios, objetivos, sin conexión) y guía de instalación para iPhone/iPad, Android y ordenador que se abre en la del dispositivo detectado (`lib/install.ts`), con botón «Instalar» donde el navegador lo permite (Chrome/Edge). Probada en un iPhone y un Android reales (2026-11-05)
   - [x] Ayudas contextuales "?" solo en los puntos confusos (2026-11-05): importe en positivo y tipos de movimiento (diálogo de movimiento), recurrentes generados al abrir la app (Recurrentes) y subcategorías que suman al padre (Presupuestos). Componente `HelpHint` (`components/help-hint.tsx`, popover de Radix): explicación corta y enlace a su pregunta en `/help`
   - [x] Modo demo con datos de ejemplo ("Probar sin registrarme") (2026-11-05): `/demo`, pública y de **solo lectura, sin base de datos** (decisión 2026-11-05: frente a un usuario anónimo propio o una cuenta compartida). Es el inicio de la app con un año de apuntes de ejemplo (`lib/demo-data.ts`) calculado con las mismas funciones que la app; muestra el último mes completo. Enlazada desde la landing y el login
 - [x] Landing page del producto (2026-11-05): en `/` para quien no tiene sesión. Estructura «la libreta de cuentas»: cuatro apuntes que se escriben en una libreta y cuya suma se convierte en el resumen de la app; después presupuestos, objetivos, evolución e informe con piezas reales de la app, la postura sobre los datos («Tu banco no se entera»), instalación y cierre. Mensajes confirmados: sin conectar el banco, sin anuncios, gratis. Contexto de producto en `PRODUCT.md` y dirección de diseño en `.impeccable/surfaces/app-landing-tsx.md` (PR #8)
@@ -117,7 +117,7 @@ Idea surgida al usar la app: una cuenta como MyInvestor contiene fondos cuyo val
   - Pendiente: decidir el nombre del producto (provisional «Finanzas»)
   - Pendiente: `DESIGN.md` (documentación del sistema de diseño) a partir del código; el agente que lo escribía se cortó
 - [~] Documentación técnica del proyecto — `CLAUDE.md` describe la arquitectura; **falta la documentación pública** y `DESIGN.md`
-- [~] **Skill «safe-money-handling» para Agensi.io** (2026-11-05, PR #9): las reglas de dinero de la app, en genérico, para vender o mostrar como portfolio. `skills/safe-money-handling/`: `SKILL.md` + `reference/money.ts` (sin dependencias) + `money.test.ts` (9 tests con `node --test`); excluido del `tsconfig` de la app. Listado no exclusivo y sin ceder la propiedad intelectual; Agensi se queda el 30 %. ZIP, capturas, logo y textos del anuncio preparados. **Falta:** que Adrián termine de enviarlo a revisión (precio recomendado: 7 $ de pago único, o gratis si prima la visibilidad)
+- [x] **Skill «safe-money-handling» para Agensi.io** (2026-11-05, PR #9): las reglas de dinero de la app, en genérico, para vender o mostrar como portfolio. `skills/safe-money-handling/`: `SKILL.md` + `reference/money.ts` (sin dependencias) + `money.test.ts` (9 tests con `node --test`); excluido del `tsconfig` de la app. Listado no exclusivo y sin ceder la propiedad intelectual; Agensi se queda el 30 %. ZIP, capturas, logo y textos del anuncio preparados; enviado a Agensi por Adrián (2026-11-05)
 - [x] Capturas para la publicación 3 de LinkedIn (presupuestos, recurrentes, objetivos) con el usuario de pruebas `ejemplo@ejemplo.com`; nunca con la cuenta real
 - [ ] Despliegue estable en dominio propio
 
@@ -138,15 +138,13 @@ Idea surgida al usar la app: una cuenta como MyInvestor contiene fondos cuyo val
 - **¿Registrar pagos leyendo las notificaciones del banco?** — Descartado. Una PWA no puede leer las notificaciones de otras apps (ni en Android ni en iOS); solo lo permite una app nativa de Android con permiso de acceso a notificaciones, y en iOS no existe. No se incluye. Alternativas realistas si se retoma: importar el extracto CSV/Excel del banco, o conectar con Open Banking (PSD2) mediante un agregador de pago.
 
 ## Pendiente, por prioridad (2026-11-05)
-1. **Probar en móviles reales:** la instalación y la guía de `/help` en un iPhone y un Android, y que las hojas suben con el teclado (PR #11).
-2. **Recurrentes en móvil:** la próxima fecha se corta (ver Calidad).
-3. **Nombre del producto y dominio propio:** con el dominio se verifica también el remitente de Resend para que el informe por email llegue a cualquier usuario.
-4. **Skill de Agensi:** enviarlo a revisión.
-5. **`DESIGN.md`** y documentación pública.
-6. **Registrar sin conexión** y sincronizar después (Fase 2).
-7. **Informes:** los objetivos vinculados a una cuenta no aparecen en las aportaciones del mensual ni del anual.
-8. **Antes de vender (Fase 5):** proveedor de precios con licencia comercial, política de privacidad/RGPD, planes con Stripe, y, si hace falta, cron con service role key para precios e informe automático.
-9. **Más adelante:** empaquetar con Tauri para escritorio.
+1. **Recurrentes en móvil:** la próxima fecha se corta (ver Calidad).
+2. **Nombre del producto y dominio propio:** con el dominio se verifica también el remitente de Resend para que el informe por email llegue a cualquier usuario.
+3. **`DESIGN.md`** y documentación pública.
+4. **Registrar sin conexión** y sincronizar después (Fase 2).
+5. **Informes:** los objetivos vinculados a una cuenta no aparecen en las aportaciones del mensual ni del anual.
+6. **Antes de vender (Fase 5):** proveedor de precios con licencia comercial, política de privacidad/RGPD, planes con Stripe, y, si hace falta, cron con service role key para precios e informe automático.
+7. **Más adelante:** empaquetar con Tauri para escritorio.
 
 ## Cómo usar este documento con Claude
 - **Claude Code:** al completar una tarea, marca su casilla aquí (con una nota breve si queda algo pendiente), actualiza "Estado actual" y la fecha, e incluye el cambio en el mismo commit que el código.
