@@ -1,3 +1,5 @@
+import type { InstallPlatform } from './install'
+
 export type FirstStepKey = 'account' | 'transaction' | 'budget' | 'recurring' | 'goal' | 'install'
 
 export type FirstStep = {
@@ -16,15 +18,25 @@ export type UsageCounts = {
   goals: number
 }
 
+export type InstallInfo = {
+  /** Dispositivo de la petición (por el user agent). En escritorio no se pide instalar. */
+  platform: InstallPlatform
+  /** Se ha usado instalada en algún dispositivo (queda en la cuenta, `user_metadata`). */
+  installed: boolean
+}
+
 /**
  * Lista de primeros pasos del inicio. Cada paso se marca solo según lo que el usuario
  * ya ha creado. Parte pura (sin base de datos), para poder testearla.
  *
- * El paso «install» siempre sale sin hacer: el servidor no puede saber si la app está
- * instalada en el dispositivo, así que lo marca el cliente (`FirstSteps`).
+ * El paso «install» no sale en escritorio (habla del móvil) y se marca hecho en cuanto
+ * la app se ha abierto instalada en cualquier dispositivo de la cuenta.
  */
-export function computeFirstSteps(counts: UsageCounts): FirstStep[] {
-  return [
+export function computeFirstSteps(
+  counts: UsageCounts,
+  install: InstallInfo = { platform: 'android', installed: false }
+): FirstStep[] {
+  const steps: FirstStep[] = [
     {
       key: 'account',
       title: 'Crea una cuenta',
@@ -65,9 +77,10 @@ export function computeFirstSteps(counts: UsageCounts): FirstStep[] {
       title: 'Instálala en tu móvil',
       text: 'Tenla a mano como una app más. Te explicamos cómo en tu dispositivo.',
       href: '/help#instalar',
-      done: false,
+      done: install.installed,
     },
   ]
+  return install.platform === 'desktop' ? steps.filter((s) => s.key !== 'install') : steps
 }
 
 export function firstStepsProgress(steps: FirstStep[]): { done: number; total: number } {

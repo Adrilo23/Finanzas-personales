@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { CheckIcon, XIcon } from 'lucide-react'
 import type { FirstStep } from '@/lib/onboarding'
 import { useInstallState } from '@/components/use-install-state'
+import { markAppInstalled } from './first-steps-actions'
 import { cn } from '@/lib/utils'
 
 const STORAGE_KEY = 'finanzas:first-steps-dismissed'
@@ -13,8 +14,15 @@ const STORAGE_KEY = 'finanzas:first-steps-dismissed'
 export function FirstSteps({ steps: serverSteps }: { steps: FirstStep[] }) {
   const [dismissed, setDismissed] = useState(false)
   const { installed } = useInstallState()
-  // El servidor no sabe si la app está instalada en este dispositivo: lo marca el cliente.
-  const steps = serverSteps.map((s) => (s.key === 'install' ? { ...s, done: installed } : s))
+  // El servidor sabe si se usó instalada en algún dispositivo; este navegador puede
+  // saberlo antes (se acaba de instalar o se está usando como app).
+  const steps = serverSteps.map((s) => (s.key === 'install' ? { ...s, done: s.done || installed } : s))
+  const installPendingOnServer = serverSteps.some((s) => s.key === 'install' && !s.done)
+
+  useEffect(() => {
+    // Se guarda en la cuenta para que el paso quede hecho también en los demás dispositivos.
+    if (installed && installPendingOnServer) void markAppInstalled()
+  }, [installed, installPendingOnServer])
 
   useEffect(() => {
     try {
