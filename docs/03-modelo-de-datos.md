@@ -34,7 +34,7 @@ Dónde está el dinero: cuenta bancaria, efectivo, tarjeta…
 | interest_next_date | date | próximo abono de intereses (día 1); los dos campos van juntos o los dos nulos |
 | created_at | timestamptz | |
 
-Intereses: cada día 1 se abona como ingreso (categoría «Intereses», se crea si no existe) el interés del mes anterior = saldo medio diario de efectivo × % ÷ 12. Lo calcula `lib/interest.ts` de forma perezosa, como los recurrentes.
+Intereses: cada día 1 se abona como ingreso (categoría «Intereses», se crea si no existe) el interés **neto** del mes anterior: bruto = Σ saldo de efectivo de cierre de cada día × % ÷ 365 (devengo diario, base 365, como los bancos), menos la retención de IRPF del 19 % redondeada hacia arriba al céntimo. La descripción guarda el bruto y la retención. El % de la cuenta es el bruto que anuncia el banco. Lo calcula `lib/interest.ts` de forma perezosa, como los recurrentes.
 
 ### categories (categorías) — `0001`
 Categorías de ingreso, gasto o inversión, con subcategorías.
