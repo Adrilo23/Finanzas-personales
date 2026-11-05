@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getBudgetProgress } from '@/lib/budgets'
 import { formatMonthYear } from '@/lib/format'
 import { PageHeader, PageShell } from '@/components/page-header'
+import { HelpHint } from '@/components/help-hint'
 import { EmptyState } from '@/components/empty-state'
 import { Amount } from '@/components/amount'
 import { CategoryBadge } from '@/components/category-type'
@@ -48,7 +49,18 @@ export default async function BudgetsPage() {
     <PageShell>
       <PageHeader
         title="Presupuestos"
-        description="Límites mensuales por categoría de gasto. Se reinician cada mes."
+        description={
+          <>
+            Límites mensuales por categoría de gasto. Se reinician cada mes.{' '}
+            <HelpHint label="subcategorías en los presupuestos" helpId="subcategorias">
+              <p>
+                El presupuesto de una categoría incluye lo gastado en sus subcategorías: el de
+                «Comida» cuenta también «Supermercado» y «Restaurantes».
+              </p>
+              <p>Al 80 % pasa a «cerca del límite» y por encima del 100 %, a «superado».</p>
+            </HelpHint>
+          </>
+        }
         actions={budgets.length > 0 ? newDialog : undefined}
       />
 
