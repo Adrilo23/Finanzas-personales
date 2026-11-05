@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { headers } from 'next/headers'
 import { endOfMonth, format, startOfMonth, subMonths } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { ArrowRightIcon, CheckIcon, ClockIcon } from 'lucide-react'
@@ -13,6 +14,7 @@ import { BudgetBar, BudgetStatusBadge } from '@/components/budget-progress'
 import { getBudgetProgress } from '@/lib/budgets'
 import { getGoals } from '@/lib/goals'
 import { computeFirstSteps } from '@/lib/onboarding'
+import { detectPlatform } from '@/lib/install'
 import { FirstSteps } from './first-steps'
 import { Landing } from './landing'
 import { GoalStatusBadge, goalBarStatus } from '@/components/goal-status'
@@ -166,6 +168,11 @@ export default async function DashboardPage() {
     budgets: budgets.length,
     recurring: recurringCount ?? 0,
     goals: goals.length,
+  }, {
+    // Por el user agent: en escritorio no se pide instalar en el móvil. (iPadOS se
+    // presenta como Mac y cuenta como escritorio aquí; es un caso menor.)
+    platform: detectPlatform((await headers()).get('user-agent') ?? ''),
+    installed: user.user_metadata?.pwa_installed === true,
   })
 
   // Compras de planes de aportación pendientes de confirmar con el bróker.
