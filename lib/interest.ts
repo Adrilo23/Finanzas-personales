@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { computeDueDates } from '@/lib/recurring'
 import { formatMonthYear } from '@/lib/format'
+import { formatCents } from '@/lib/money'
 import { addDays, addMonths, eachDayOfInterval, format, parseISO, startOfMonth } from 'date-fns'
 
 /** Movimiento de efectivo de una cuenta: importe con signo en céntimos y su fecha. */
@@ -20,9 +21,20 @@ export function interestPeriod(paymentDate: string): { start: string; end: strin
   }
 }
 
+/** Base de cálculo de los bancos en España: el % anual se reparte entre 365 días. */
+export const DAYS_PER_YEAR = 365
+
 /**
- * Interés de un mes: saldo medio diario × % anual ÷ 12, redondeado al céntimo.
- * El saldo de cada día es el de cierre (saldo inicial + movimientos hasta ese día).
+ * Retención de IRPF sobre los intereses de cuentas (rendimientos del capital mobiliario).
+ * En España es un 19 % fijo, y el banco abona el neto.
+ */
+export const INTEREST_WITHHOLDING_PERCENT = 19
+
+/**
+ * Interés BRUTO de un mes, devengado día a día como hacen los bancos:
+ * Σ (saldo de cierre de cada día) × % anual ÷ 365, redondeado al céntimo.
+ * (Antes se usaba saldo medio × % ÷ 12, que no cuadra con lo que paga el banco: un mes
+ * de 31 días devenga 31/365 del año, no 1/12.)
  * Los días con saldo negativo y los anteriores a `openedOn` (la cuenta aún no existía)
  * cuentan como 0. Los movimientos posteriores al periodo se ignoran.
  */
@@ -58,12 +70,27 @@ export function monthlyInterestCents({
     sum += Math.max(balance, 0)
   }
 
-  return Math.round(((sum / days.length) * ratePercent) / 100 / 12)
+  return Math.round((sum * ratePercent) / 100 / DAYS_PER_YEAR)
 }
 
 /**
- * Abonos pendientes de una cuenta, en orden. Cada abono se suma al saldo de los meses
- * siguientes (interés compuesto), por si la app lleva varios meses sin abrirse.
+ * Del bruto al neto: la retención se redondea hacia arriba al céntimo, como en los
+ * extractos (13,76 € × 19 % = 2,6144 € → 2,62 €; neto 11,14 €).
+ */
+export function applyWithholding(
+  grossCents: number,
+  withholdingPercent = INTEREST_WITHHOLDING_PERCENT
+): { grossCents: number; taxCents: number; netCents: number } {
+  if (grossCents <= 0) return { grossCents: 0, taxCents: 0, netCents: 0 }
+  // El -1e-9 evita que el ruido de coma flotante suba un céntimo un resultado exacto.
+  const taxCents = Math.ceil((grossCents * withholdingPercent) / 100 - 1e-9)
+  return { grossCents, taxCents, netCents: grossCents - taxCents }
+}
+
+/**
+ * Abonos pendientes de una cuenta, en orden, con bruto, retención y neto. Lo que entra
+ * en la cuenta es el neto, y es lo que se suma al saldo de los meses siguientes (interés
+ * compuesto), por si la app lleva varios meses sin abrirse.
  */
 export function computeInterestPayments({
   nextDate,
@@ -79,21 +106,32 @@ export function computeInterestPayments({
   initialCents: number
   movements: CashMovement[]
   openedOn?: string
-}): { payments: { date: string; cents: number }[]; next: string } {
+}): { payments: InterestPayment[]; next: string } {
   const { dates, next } = computeDueDates(nextDate, 'monthly', today, 1)
   const all = [...movements]
   const payments = dates.map((date) => {
-    const cents = monthlyInterestCents({
+    const gross = monthlyInterestCents({
       paymentDate: date,
       ratePercent,
       initialCents,
       movements: all,
       openedOn,
     })
-    all.push({ date, cents })
-    return { date, cents }
+    const { grossCents, taxCents, netCents } = applyWithholding(gross)
+    all.push({ date, cents: netCents })
+    return { date, grossCents, taxCents, cents: netCents }
   })
   return { payments, next }
+}
+
+/** Un abono: `cents` es el neto que entra en la cuenta. */
+export type InterestPayment = { date: string; grossCents: number; taxCents: number; cents: number }
+
+/** «Intereses de octubre de 2026 · 13,76 € brutos − 2,62 € de retención (19 %)». */
+export function interestDescription(payment: InterestPayment): string {
+  const month = formatMonthYear(parseISO(interestPeriod(payment.date).start))
+  if (payment.taxCents === 0) return `Intereses de ${month}`
+  return `Intereses de ${month} · ${formatCents(payment.grossCents)} brutos − ${formatCents(payment.taxCents)} de retención (${INTEREST_WITHHOLDING_PERCENT} %)`
 }
 
 /** Categoría de ingreso "Intereses" del usuario; si no existe, se crea. */
@@ -196,7 +234,7 @@ export async function processAccountInterest(userId: string) {
         category_id: categoryId,
         amount_cents: p.cents,
         currency: account.currency,
-        description: `Intereses de ${formatMonthYear(parseISO(interestPeriod(p.date).start))}`,
+        description: interestDescription(p),
         transaction_date: p.date,
       }))
     if (rows.length === 0) continue

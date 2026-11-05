@@ -185,8 +185,8 @@ export function NewAccountDialog({
               </span>
             </div>
             <FieldHint>
-              Si la cuenta está remunerada, cada día 1 se abona como ingreso el interés del mes
-              anterior sobre su saldo medio. Si te retienen impuestos, pon el % neto.
+              Pon el % que anuncia el banco (bruto). Cada día 1 se abona el interés del mes
+              anterior, calculado día a día, ya descontada la retención del 19 %.
             </FieldHint>
             <FieldError>{errors.interestRate?.message}</FieldError>
           </Field>
