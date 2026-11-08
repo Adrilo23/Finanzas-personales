@@ -4,7 +4,7 @@
 >
 > **Fuente de verdad:** este archivo del repo (GitHub `Adrilo23/Finanzas-personales`). Claude Code lo actualiza al terminar cada tarea, en el mismo commit que el código.
 
-## Estado actual: 🟢 Fases 1, 3, 3b y 3c completas, con tests y CI, y en producción. El 2026-11-05 se fusionaron los PR #6 a #11: ayudas «?», intereses con retención del 19 %, landing y demo públicas, skill de Agensi, primeros pasos sin «instalar» en ordenador y hojas que suben con el teclado en móvil. Migraciones 0001-0016 aplicadas en remoto; email del informe configurado con Resend. Aparcados: actualización programada de precios y envío automático del informe (ver notas). El 2026-11-08: informes con objetivos vinculados, README al día y privacidad/borrado de cuenta y registro de movimientos sin conexión. Siguiente: decidir el nombre del producto y el dominio propio (Fase 4); ver «Pendiente, por prioridad» al final
+## Estado actual: 🟢 Fases 1, 3, 3b y 3c completas, con tests y CI, y en producción. El 2026-11-05 se fusionaron los PR #6 a #11: ayudas «?», intereses con retención del 19 %, landing y demo públicas, skill de Agensi, primeros pasos sin «instalar» en ordenador y hojas que suben con el teclado en móvil. Migraciones 0001-0017 aplicadas en remoto; email del informe configurado con Resend. Aparcados: actualización programada de precios y envío automático del informe (ver notas). El 2026-11-08: informes con objetivos vinculados, README al día y privacidad/borrado de cuenta y registro de movimientos sin conexión. Siguiente: decidir el nombre del producto y el dominio propio (Fase 4); ver «Pendiente, por prioridad» al final
 
 Última actualización: 2026-11-08
 
@@ -134,9 +134,9 @@ Idea surgida al usar la app: una cuenta como MyInvestor contiene fondos cuyo val
 ## Auditoría de seguridad (2026-11-08)
 - [~] Revisión con los agentes `security-reviewer` (aplicación) y `database-reviewer` (RLS y migraciones): sin hallazgos críticos ni altos; ningún usuario autenticado puede leer ni modificar datos de otro. Correcciones aplicadas en el código y en la migración `0017` (ver `03-modelo-de-datos.md` y la sección «Seguridad» de `CLAUDE.md`): caché del service worker, archivos huérfanos en Storage, redirección abierta, contraseña mínima de 10, errores genéricos, `requireUser` en todas las actions, límite de frecuencia, HMAC en el limitador de login, duplicados en recurrentes y planes, permisos de `anon`, trigger de signo, índices, y exportación de movimientos paginada (antes se cortaba a 1000 filas)
   - **Pendiente (lo tienes que hacer tú):**
-    1. Aplicar la migración `0017` (`npx supabase db push --remote`) y después `npm run db:types`
-    2. Definir `THROTTLE_SECRET` en Vercel (cadena aleatoria larga); sin ella el limitador usa SHA-256 plano
-    3. En el panel de Supabase Auth: subir la longitud mínima de contraseña a 10, activar CAPTCHA y revisar los límites de peticiones (el limitador de la app se salta yendo directo al endpoint de Auth)
+    1. ~~Aplicar la migración `0017`~~ — hecha el 2026-11-08 (tipos regenerados; comprobado que gastos e ingresos se guardan con el signo correcto)
+    1. Definir `THROTTLE_SECRET` en Vercel (cadena aleatoria larga); sin ella el limitador usa SHA-256 plano
+    2. En el panel de Supabase Auth: subir la longitud mínima de contraseña a 10, activar CAPTCHA y revisar los límites de peticiones (el limitador de la app se salta yendo directo al endpoint de Auth)
   - **No aplicado a propósito:** el índice único por `(recurring_rule_id, transaction_date, account_id)` (los planes con reparto repiten regla, fecha y cuenta, y fallaría); la URL del enlace de confirmación sigue saliendo del host de la petición (en Vercel lo valida el enrutado); `validate constraint` de las restricciones de `0014` (hay que limpiar antes los movimientos de 0 céntimos); la cola sin conexión conserva los pendientes del usuario tras cerrar sesión para no perder datos sin sincronizar
 
 ## Decisiones (antes "pendientes")

@@ -359,6 +359,27 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_events: {
+        Row: {
+          action: string
+          created_at: string
+          id: number
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: never
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: never
+          user_id?: string
+        }
+        Relationships: []
+      }
       recurring_allocations: {
         Row: {
           amount_cents: number
