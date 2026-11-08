@@ -13,6 +13,7 @@ import {
   HouseIcon,
   LogOutIcon,
   PiggyBankIcon,
+  FileTextIcon,
   ShieldCheckIcon,
   RepeatIcon,
   TagIcon,
@@ -286,6 +287,15 @@ function UserMenu({ email }: { email: string }) {
             >
               <ShieldCheckIcon aria-hidden className="size-4 text-muted-foreground" />
               Privacidad
+            </Link>
+          </DropdownMenu.Item>
+          <DropdownMenu.Item asChild>
+            <Link
+              href="/terms"
+              className="flex w-full cursor-default items-center gap-2 rounded-lg px-2.5 py-2 outline-none data-highlighted:bg-muted"
+            >
+              <FileTextIcon aria-hidden className="size-4 text-muted-foreground" />
+              Términos de uso
             </Link>
           </DropdownMenu.Item>
           <form action={logout}>

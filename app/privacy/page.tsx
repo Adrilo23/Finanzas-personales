@@ -1,28 +1,11 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ArrowLeftIcon } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader, PageShell } from '@/components/page-header'
+import { LegalBackLink, LegalSection as Section, legalLink as link, legalStrong as strong } from '@/components/legal-page'
+import { formatLegalDate, LEGAL } from '@/lib/legal'
 
 export const metadata: Metadata = { title: 'Privacidad' }
-
-/**
- * Correo de contacto para ejercer derechos. Rellenar antes de abrir la app a terceros:
- * mientras esté vacío, la página no muestra ninguno.
- */
-const CONTACT_EMAIL = ''
-
-const link = 'font-medium text-foreground underline underline-offset-2 hover:text-brand'
-const strong = 'text-foreground'
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="space-y-2.5">
-      <h2 className="text-base font-semibold tracking-[-0.01em]">{title}</h2>
-      <div className="space-y-2.5 text-sm leading-relaxed text-muted-foreground">{children}</div>
-    </section>
-  )
-}
 
 export default async function PrivacyPage() {
   const supabase = await createClient()
@@ -32,21 +15,28 @@ export default async function PrivacyPage() {
 
   return (
     <PageShell>
-      {!user && (
-        <Link
-          href="/"
-          className="-mb-4 inline-flex items-center gap-1.5 rounded-lg text-sm font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/40"
-        >
-          <ArrowLeftIcon aria-hidden className="size-4" />
-          Inicio
-        </Link>
-      )}
+      {!user && <LegalBackLink />}
       <PageHeader
         title="Privacidad"
         description="Qué datos guarda la app, para qué y cómo puedes controlarlos."
       />
 
       <div className="surface space-y-7 p-5 sm:p-6">
+        <Section title="Quién es el responsable">
+          <p>
+            El responsable del tratamiento de tus datos es <strong className={strong}>{LEGAL.ownerName}</strong>,
+            titular de esta aplicación. Puedes escribirle a{' '}
+            <a href={`mailto:${LEGAL.contactEmail}`} className={link}>
+              {LEGAL.contactEmail}
+            </a>{' '}
+            para cualquier duda o para ejercer tus derechos. Aquí tienes también los{' '}
+            <Link href="/terms" className={link}>
+              términos de uso y el aviso legal
+            </Link>
+            .
+          </p>
+        </Section>
+
         <Section title="Qué datos guardamos">
           <ul className="list-disc space-y-1.5 pl-5">
             <li>Tu correo electrónico y tu contraseña (esta, cifrada: nadie puede leerla).</li>
@@ -58,6 +48,10 @@ export default async function PrivacyPage() {
               Para limitar los intentos de acceso, una huella irreversible (hash) de la dirección IP
               y del correo con el que alguien falla al entrar. No permite saber cuáles eran.
             </li>
+            <li>
+              Un contador de cuántas veces pides un informe por correo o una descarga, para evitar
+              abusos. Guarda la acción y la hora, no su contenido.
+            </li>
           </ul>
           <p>
             <strong className={strong}>No</strong> te pedimos credenciales de tu banco ni nos
@@ -65,11 +59,21 @@ export default async function PrivacyPage() {
           </p>
         </Section>
 
-        <Section title="Para qué los usamos">
+        <Section title="Para qué los usamos y con qué base legal">
           <p>
             Solo para que la app funcione: mostrarte tus saldos, informes y avisos. No hay
             publicidad, no vendemos ni cedemos tus datos y no los usamos para perfilarte.
           </p>
+          <ul className="list-disc space-y-1.5 pl-5">
+            <li>
+              <strong className={strong}>Prestarte el servicio</strong> que has pedido al crear la
+              cuenta (art. 6.1.b del Reglamento General de Protección de Datos, RGPD).
+            </li>
+            <li>
+              <strong className={strong}>Seguridad de la app</strong>: limitar intentos de acceso
+              fallidos y abusos (interés legítimo, art. 6.1.f RGPD).
+            </li>
+          </ul>
         </Section>
 
         <Section title="Quién los trata por nosotros">
@@ -92,14 +96,21 @@ export default async function PrivacyPage() {
               se envía ningún dato tuyo.
             </li>
           </ul>
+          <p>
+            Algunos de estos proveedores pueden tratar datos fuera del Espacio Económico Europeo;
+            en ese caso se apoyan en las garantías que exige el RGPD (decisiones de adecuación o
+            cláusulas contractuales tipo).
+          </p>
         </Section>
 
         <Section title="Cookies">
           <p>
             Solo usamos las cookies de sesión necesarias para mantenerte conectado (los scripts del
-            navegador no pueden leerlas). No hay cookies de análisis ni de publicidad. En tu
-            navegador se guardan, además, preferencias locales como ocultar la lista de primeros
-            pasos.
+            navegador no pueden leerlas). Son cookies técnicas imprescindibles para el servicio, por
+            lo que la normativa (art. 22.2 de la LSSI-CE) no exige tu consentimiento y por eso no
+            ves un aviso de cookies. No hay cookies de análisis ni de publicidad. En tu navegador se
+            guardan, además, preferencias locales como ocultar la lista de primeros pasos, y la
+            copia sin conexión de las páginas que ya has visto (se borra al cerrar sesión).
           </p>
         </Section>
 
@@ -111,7 +122,7 @@ export default async function PrivacyPage() {
         </Section>
 
         <Section title="Tus derechos">
-          <p>Puedes acceder a tus datos, corregirlos, llevártelos y borrarlos:</p>
+          <p>Puedes acceder a tus datos, corregirlos, llevártelos, limitarlos y borrarlos:</p>
           <ul className="list-disc space-y-1.5 pl-5">
             <li>
               <strong className={strong}>Acceso y portabilidad</strong>: descarga tus movimientos
@@ -132,21 +143,24 @@ export default async function PrivacyPage() {
               </Link>{' '}
               puedes eliminar tu usuario y todo lo asociado, adjuntos incluidos, al instante.
             </li>
+            <li>
+              <strong className={strong}>Oposición y limitación del tratamiento</strong>: escribe
+              al correo de contacto.
+            </li>
           </ul>
           <p>
-            {CONTACT_EMAIL ? (
-              <>
-                Para cualquier otra petición o duda, escribe a{' '}
-                <a href={`mailto:${CONTACT_EMAIL}`} className={link}>
-                  {CONTACT_EMAIL}
-                </a>
-                .{' '}
-              </>
-            ) : null}
-            Si crees que tus datos no se tratan bien, puedes reclamar ante la Agencia Española de
+            Para cualquier petición, escribe a{' '}
+            <a href={`mailto:${LEGAL.contactEmail}`} className={link}>
+              {LEGAL.contactEmail}
+            </a>
+            . Si crees que tus datos no se tratan bien, puedes reclamar ante la Agencia Española de
             Protección de Datos (aepd.es).
           </p>
         </Section>
+
+        <p className="text-xs text-muted-foreground">
+          Última revisión: {formatLegalDate(LEGAL.updated)}.
+        </p>
       </div>
     </PageShell>
   )

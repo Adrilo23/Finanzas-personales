@@ -13,6 +13,10 @@ export const registerSchema = loginSchema
   .extend({
     password: z.string().min(MIN_PASSWORD_LENGTH, `Mínimo ${MIN_PASSWORD_LENGTH} caracteres`),
     confirmPassword: z.string(),
+    // Aceptación de los términos y la política de privacidad (consentimiento en el alta).
+    acceptTerms: z.boolean().refine((value) => value === true, {
+      message: 'Tienes que aceptar los términos y la política de privacidad',
+    }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Las contraseñas no coinciden',
