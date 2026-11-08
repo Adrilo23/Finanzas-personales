@@ -34,6 +34,9 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: dark)", color: "#151412" },
   ],
   viewportFit: "cover",
+  // Chrome en Android encoge la página con el teclado en el mismo fotograma. Seguir el
+  // teclado solo con visualViewport (JS) llegaba tarde: franja en blanco y saltos de la hoja.
+  interactiveWidget: "resizes-content",
 };
 
 export default function RootLayout({

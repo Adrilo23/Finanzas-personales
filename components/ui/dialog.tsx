@@ -72,7 +72,15 @@ function DialogContent({
     const field = event.target
     if (!(field instanceof HTMLElement) || !field.matches("input, textarea, select")) return
     if (window.matchMedia("(min-width: 40rem)").matches) return
-    window.setTimeout(() => field.scrollIntoView({ block: "nearest", behavior: "smooth" }), 300)
+    window.setTimeout(() => {
+      // Si el navegador ya lo dejó a la vista, no se mueve otra vez (era el segundo salto).
+      const vv = window.visualViewport
+      const rect = field.getBoundingClientRect()
+      const top = vv ? vv.offsetTop : 0
+      const bottom = vv ? vv.offsetTop + vv.height : window.innerHeight
+      if (rect.top >= top && rect.bottom <= bottom) return
+      field.scrollIntoView({ block: "nearest" })
+    }, 300)
   }
 
   return (
