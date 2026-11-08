@@ -28,13 +28,14 @@
 | 🔀 **Traspasos** | Mover dinero entre cuentas sin que cuente como ingreso, gasto ni presupuesto. También periódicos. |
 | 📈 **Inversiones** | Cuentas de inversión con fondos (por ISIN, validado con dígito de control) y criptomonedas. Valor actual, aportado y rentabilidad en € y %. |
 | 🪙 **Planes de aportación** | Un traspaso recurrente que reparte el dinero entre activos y crea compras pendientes que confirmas con las participaciones reales del bróker. |
-| 💰 **Cuentas remuneradas** | Interés anual opcional por cuenta, abonado cada mes sobre el saldo medio diario. |
+| 💰 **Cuentas remuneradas** | Interés anual opcional por cuenta, devengado día a día y abonado cada mes neto de la retención del 19 %. |
 | 🎯 **Presupuestos** | Límite mensual por categoría con avisos visuales («cerca del límite» al 80 %, «superado» por encima del 100 %). |
-| 🏁 **Objetivos de ahorro** | Metas con cantidad y fecha opcional; aportaciones manuales, cuota mensual necesaria, ritmo real y fecha estimada. |
-| 📄 **Informe mensual** | Resumen del mes (balance, tasa de ahorro, categorías, presupuestos, objetivos) descargable en PDF. |
-| 📊 **Informes** | Evolución mensual de los últimos 12 meses con gráfica accesible y apta para daltonismo. |
+| 🏁 **Objetivos de ahorro** | Metas con cantidad y fecha opcional; aportaciones manuales o vinculadas al saldo de una cuenta, cuota mensual necesaria, ritmo real y fecha estimada. |
+| 📄 **Informes** | Mensual y anual (balance, tasa de ahorro, categorías, presupuestos, objetivos y comparación con el periodo anterior), en PDF y, el mensual, por correo. |
+| 📊 **Evolución** | Gráfica mensual (12 meses) y anual, accesible y apta para daltonismo. |
 | 📤 **Exportación** | Descarga de movimientos a Excel (XLSX) o PDF con los mismos filtros de la lista. |
 | 📱 **PWA** | Instalable en el móvil, con modo claro/oscuro, navegación inferior en móvil y lectura sin conexión de las páginas visitadas. |
+| 🙋 **Primeros pasos** | Landing pública, demo de solo lectura con datos de ejemplo (`/demo`), página de ayuda (`/help`), ayudas contextuales y lista de primeros pasos que se marca sola. |
 
 ## 🧱 Stack
 
@@ -53,7 +54,8 @@
 
 - **El dinero son enteros.** Los importes se guardan como `bigint` en céntimos y toda conversión pasa por `lib/money.ts`, para evitar errores de coma flotante.
 - **El signo lo decide el servidor.** El usuario siempre escribe importes positivos; el signo sale del tipo de categoría, así no hay movimientos con el signo cambiado.
-- **Seguridad en la base de datos.** Cada tabla tiene RLS con políticas `user_id = auth.uid()`: la app solo usa la anon key y nadie puede leer datos ajenos.
+- **Seguridad en la base de datos.** Cada tabla tiene RLS con políticas `user_id = auth.uid()` (y las de escritura comprueban que cada clave foránea sea del usuario): la app solo usa la anon key y nadie puede leer datos ajenos.
+- **Sin cliente de Supabase en el navegador.** Las cookies de sesión son `HttpOnly` y `Secure`; los componentes cliente llaman a Server Actions. Además hay CSP con nonce, cabeceras de seguridad y límite de intentos de login.
 - **Lógica pura y testeada.** Los cálculos (presupuestos, recurrentes, intereses, informes, reparto de aportaciones) son funciones puras separadas de las consultas, con tests junto al código.
 - **Consistencia atómica.** Las operaciones que tocan varias filas (traspasos, planes de aportación, edición de reglas) son funciones SQL (RPC) que se ejecutan en una sola transacción.
 - **Sin cron.** Los recurrentes, intereses y precios se procesan de forma perezosa al cargar la app, con reserva del periodo para no duplicar si coinciden dos cargas.
@@ -73,6 +75,10 @@ Crea un `.env.local` con las claves de tu proyecto de Supabase:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://<tu-proyecto>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<tu-anon-key>
+
+# Opcionales, solo servidor: envío del informe mensual por correo (Resend)
+RESEND_API_KEY=<tu-api-key>
+EMAIL_FROM=Finanzas <informes@tu-dominio.com>
 ```
 
 Aplica las migraciones de `supabase/migrations/` a tu proyecto (con la [CLI de Supabase](https://supabase.com/docs/guides/cli): `npx supabase link` y `npx supabase db push`) y arranca la app:
@@ -100,10 +106,11 @@ Abre <http://localhost:3000>, crea una cuenta y empieza.
 app/            Rutas (accounts, categories, transactions, recurring, budgets, reports…)
 components/     Componentes compartidos y UI base (shadcn)
 lib/            Lógica de dinero y cálculos, con sus tests (*.test.ts)
-  supabase/     Clientes de servidor y de navegador, y tipos de la base de datos
+  supabase/     Cliente de servidor y tipos de la base de datos
   validation/   Esquemas zod
-supabase/       Migraciones SQL numeradas (0001 – 0011)
+supabase/       Migraciones SQL numeradas (0001 – 0014)
 docs/           Stack, modelo de datos y roadmap
+skills/         Skill «safe-money-handling» extraída de las reglas de dinero de la app
 ```
 
 Cada sección de `app/` sigue el mismo patrón: `page.tsx` (Server Component), `actions.ts` (Server Actions con validación zod) y un diálogo cliente para los formularios.
@@ -113,11 +120,11 @@ Cada sección de `app/` sigue el mismo patrón: `page.tsx` (Server Component), `
 El estado detallado está en [`docs/04-roadmap.md`](docs/04-roadmap.md). Resumen:
 
 - ✅ MVP: autenticación, cuentas, categorías, movimientos, saldos y panel de inicio
-- ✅ Recurrentes, adjuntos, exportación, presupuestos e informes mensuales
+- ✅ Recurrentes, adjuntos, exportación, presupuestos, objetivos e informes mensual y anual
 - ✅ Inversiones, traspasos, planes de aportación y cuentas remuneradas
 - ✅ Rediseño de la interfaz (claro/oscuro, móvil primero), tests y CI
-- 🚧 Ayuda para nuevos usuarios, modo demo y landing
-- 🔜 Actualización diaria programada de precios, informe anual y modo offline con sincronización
+- ✅ Auditoría de seguridad atendida, ayuda para nuevos usuarios, modo demo y landing
+- 🔜 Dominio propio, política de privacidad, registro sin conexión con sincronización y empaquetado de escritorio (Tauri)
 
 ## ⚠️ Aviso sobre los precios
 

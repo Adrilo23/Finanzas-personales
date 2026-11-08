@@ -9,6 +9,7 @@ import {
 import { buildTransferRows } from '@/lib/transfers'
 import { applyCategorySign, eurosToCents } from '@/lib/money'
 import { revalidatePath } from 'next/cache'
+import { z } from 'zod'
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>
 
@@ -77,13 +78,18 @@ export async function createTransaction(formData: FormData) {
     return { error: result.error }
   }
 
+  // Id generado en el navegador para el registro sin conexión (ver lib/offline-queue.ts).
+  const clientId = z.string().uuid().safeParse(formData.get('clientId'))
+
   const { error } = await supabase.from('transactions').insert({
     ...result.values,
     user_id: user.id,
     currency: 'EUR',
+    client_id: clientId.success ? clientId.data : null,
   })
 
-  if (error) {
+  // 23505 con client_id: es el reintento de un movimiento que ya se guardó.
+  if (error && !(clientId.success && error.code === '23505')) {
     return { error: error.message }
   }
 

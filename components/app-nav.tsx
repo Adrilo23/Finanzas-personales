@@ -3,6 +3,7 @@ import { processRecurringRules } from '@/lib/recurring'
 import { refreshStalePrices } from '@/lib/prices'
 import { processAccountInterest } from '@/lib/interest'
 import { NavLinks } from '@/components/nav-links'
+import { OfflineSync } from '@/components/offline-sync'
 
 export async function AppNav() {
   const supabase = await createClient()
@@ -19,5 +20,10 @@ export async function AppNav() {
     processAccountInterest(user.id),
   ])
 
-  return <NavLinks email={user.email ?? ''} />
+  return (
+    <>
+      <NavLinks email={user.email ?? ''} />
+      <OfflineSync userId={user.id} />
+    </>
+  )
 }

@@ -1,7 +1,8 @@
 import { addMonths, endOfMonth, format, isValid, parse, startOfMonth } from 'date-fns'
 import { createClient } from '@/lib/supabase/server'
 import { computeBudgetProgress, type BudgetProgress } from '@/lib/budgets'
-import { percentChange, sumByType, type Totals } from '@/lib/stats'
+import { getLinkedGoalContributions } from '@/lib/goals'
+import { percentChange,sumByType, type Totals } from '@/lib/stats'
 
 function first<T>(value: T[] | T | null): T | null {
   if (Array.isArray(value)) return value[0] ?? null
@@ -147,7 +148,14 @@ export async function getMonthlyReport(month: Date): Promise<MonthlyReport> {
 
   const txSelect = 'category_id, amount_cents, description, transaction_date, categories(name, type, icon)'
 
-  const [{ data: rows }, { data: previousRows }, { data: budgets }, { data: categories }, { data: contributions }] =
+  const [
+    { data: rows },
+    { data: previousRows },
+    { data: budgets },
+    { data: categories },
+    { data: contributions },
+    linkedContributions,
+  ] =
     await Promise.all([
       supabase
         .from('transactions')
@@ -171,6 +179,7 @@ export async function getMonthlyReport(month: Date): Promise<MonthlyReport> {
         .select('goal_id, amount_cents, savings_goals(name)')
         .gte('contribution_date', from)
         .lte('contribution_date', to),
+      getLinkedGoalContributions(supabase, from, to),
     ])
 
   return computeMonthlyReport(
@@ -179,6 +188,6 @@ export async function getMonthlyReport(month: Date): Promise<MonthlyReport> {
     previousRows ?? [],
     budgets ?? [],
     categories ?? [],
-    contributions ?? []
+    [...(contributions ?? []), ...linkedContributions]
   )
 }

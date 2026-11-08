@@ -13,9 +13,11 @@ import {
   HouseIcon,
   LogOutIcon,
   PiggyBankIcon,
+  ShieldCheckIcon,
   RepeatIcon,
   TagIcon,
   TargetIcon,
+  UserRoundIcon,
   WalletIcon,
   type LucideIcon,
 } from 'lucide-react'
@@ -266,6 +268,24 @@ function UserMenu({ email }: { email: string }) {
             >
               <CircleHelpIcon aria-hidden className="size-4 text-muted-foreground" />
               Ayuda
+            </Link>
+          </DropdownMenu.Item>
+          <DropdownMenu.Item asChild>
+            <Link
+              href="/settings"
+              className="flex w-full cursor-default items-center gap-2 rounded-lg px-2.5 py-2 outline-none data-highlighted:bg-muted"
+            >
+              <UserRoundIcon aria-hidden className="size-4 text-muted-foreground" />
+              Tu cuenta
+            </Link>
+          </DropdownMenu.Item>
+          <DropdownMenu.Item asChild>
+            <Link
+              href="/privacy"
+              className="flex w-full cursor-default items-center gap-2 rounded-lg px-2.5 py-2 outline-none data-highlighted:bg-muted"
+            >
+              <ShieldCheckIcon aria-hidden className="size-4 text-muted-foreground" />
+              Privacidad
             </Link>
           </DropdownMenu.Item>
           <form action={logout}>

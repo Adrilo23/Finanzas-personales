@@ -173,6 +173,9 @@ export function Landing() {
           <Link href="/help" className="hover:text-foreground">
             Ayuda
           </Link>
+          <Link href="/privacy" className="hover:text-foreground">
+            Privacidad
+          </Link>
           <Link href="/login" className="hover:text-foreground">
             Entrar
           </Link>

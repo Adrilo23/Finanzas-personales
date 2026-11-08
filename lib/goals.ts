@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/fetch-all'
 import { addMonths, differenceInCalendarMonths, format, parseISO, startOfDay, subDays } from 'date-fns'
 
 export type GoalStatus = 'completed' | 'on_track' | 'behind' | 'overdue' | 'no_deadline'
@@ -173,6 +174,60 @@ export async function getLinkedAccounts(
     })
   }
   return map
+}
+
+/** Aportación neta de un objetivo en un periodo, con la forma que usan los informes. */
+export type ReportGoalContribution = {
+  goal_id: string
+  amount_cents: number
+  savings_goals: { name: string }
+}
+
+/**
+ * Parte pura: movimientos de cuentas vinculadas → aportación neta por objetivo. Los
+ * traspasos cuentan (son el dinero que entra o sale del objetivo); las revalorizaciones de
+ * una cuenta de inversión no son movimientos, así que no aparecen.
+ */
+export function linkedGoalContributions(
+  goals: { id: string; name: string; account_id: string | null }[],
+  flows: { account_id: string; amount_cents: number }[]
+): ReportGoalContribution[] {
+  const result: ReportGoalContribution[] = []
+  for (const g of goals) {
+    if (!g.account_id) continue
+    const net = flows
+      .filter((f) => f.account_id === g.account_id)
+      .reduce((sum, f) => sum + f.amount_cents, 0)
+    if (net !== 0) result.push({ goal_id: g.id, amount_cents: net, savings_goals: { name: g.name } })
+  }
+  return result
+}
+
+/** Aportación neta de los objetivos vinculados a una cuenta entre dos fechas ('yyyy-MM-dd'). */
+export async function getLinkedGoalContributions(
+  supabase: SupabaseServer,
+  from: string,
+  through: string
+): Promise<ReportGoalContribution[]> {
+  const { data: goals } = await supabase
+    .from('savings_goals')
+    .select('id, name, account_id')
+    .not('account_id', 'is', null)
+  if (!goals || goals.length === 0) return []
+
+  const ids = [...new Set(goals.map((g) => g.account_id).filter((id): id is string => !!id))]
+  const flows = await fetchAllRows((start, end) =>
+    supabase
+      .from('transactions')
+      .select('account_id, amount_cents')
+      .is('deleted_at', null)
+      .in('account_id', ids)
+      .gte('transaction_date', from)
+      .lte('transaction_date', through)
+      .order('id')
+      .range(start, end)
+  )
+  return linkedGoalContributions(goals, flows)
 }
 
 /** Objetivos del usuario con su progreso (consulta y delega en computeGoals). */

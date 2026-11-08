@@ -11,6 +11,7 @@ import {
   type TransferInput,
 } from '@/lib/validation/transaction-schemas'
 import { centsToEuros, parseEurosInput } from '@/lib/money'
+import { enqueueMovement } from '@/lib/offline-queue'
 import { createTransaction, createTransfer, updateTransaction, updateTransfer } from './actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -279,10 +280,39 @@ function MovementForm({
     formData.set('amount', String(data.amount))
     formData.set('description', data.description ?? '')
     formData.set('transactionDate', data.transactionDate)
+    // Los movimientos nuevos llevan un id propio: si hay que guardarlos para más tarde (o
+    // la respuesta se pierde), el servidor no los duplica al reintentar.
+    const clientId = transaction ? null : crypto.randomUUID()
+    if (clientId) formData.set('clientId', clientId)
 
-    const result = transaction
-      ? await updateTransaction(transaction.id, formData)
-      : await createTransaction(formData)
+    let result
+    try {
+      result = transaction
+        ? await updateTransaction(transaction.id, formData)
+        : await createTransaction(formData)
+    } catch {
+      // Sin conexión: los movimientos nuevos se guardan en el dispositivo y se envían al volver.
+      const queued =
+        clientId !== null &&
+        (await enqueueMovement({
+          clientId,
+          accountId: data.accountId,
+          categoryId,
+          amount: data.amount,
+          description: data.description ?? '',
+          transactionDate: data.transactionDate,
+        }))
+      if (queued) {
+        onDone()
+        return
+      }
+      setServerError(
+        transaction
+          ? 'Sin conexión: para editar un movimiento hace falta conexión.'
+          : 'Sin conexión, y no se ha podido guardar en este dispositivo.'
+      )
+      return
+    }
     if (result?.error) {
       setServerError(result.error)
       return

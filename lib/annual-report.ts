@@ -1,7 +1,8 @@
 import { format, subYears } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { createClient } from '@/lib/supabase/server'
-import { percentChange, sumByType, type Totals } from '@/lib/stats'
+import { getLinkedGoalContributions } from '@/lib/goals'
+import { percentChange,sumByType, type Totals } from '@/lib/stats'
 import { fetchAllRows } from '@/lib/fetch-all'
 
 function first<T>(value: T[] | T | null): T | null {
@@ -220,7 +221,7 @@ export async function getAnnualReport(year: number, now = new Date()): Promise<A
         .range(start, end)
     )
 
-  const [rows, previousRows, { data: contributions }] = await Promise.all([
+  const [rows, previousRows, { data: contributions }, linkedContributions] = await Promise.all([
     yearRows(r.from, r.through),
     yearRows(r.previousFrom, r.previousThrough),
     supabase
@@ -228,7 +229,11 @@ export async function getAnnualReport(year: number, now = new Date()): Promise<A
       .select('goal_id, amount_cents, savings_goals(name)')
       .gte('contribution_date', r.from)
       .lte('contribution_date', r.through),
+    getLinkedGoalContributions(supabase, r.from, r.through),
   ])
 
-  return computeAnnualReport(year, now, rows, previousRows, contributions ?? [])
+  return computeAnnualReport(year, now, rows, previousRows, [
+    ...(contributions ?? []),
+    ...linkedContributions,
+  ])
 }
