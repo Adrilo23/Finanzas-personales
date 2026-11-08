@@ -4,7 +4,6 @@ import * as React from "react"
 import { Dialog as DialogPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
-import { useKeyboardInset } from "@/components/use-keyboard-inset"
 import { Button } from "@/components/ui/button"
 import { XIcon } from "lucide-react"
 
@@ -52,37 +51,10 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
-  style,
-  onFocus,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
 }) {
-  // En móvil la hoja va pegada abajo y el teclado la taparía: sube con él y se ajusta
-  // al alto que queda visible (en escritorio, las clases sm: lo anulan).
-  const { inset, visibleHeight } = useKeyboardInset()
-  const keyboardStyle = {
-    "--kb-inset": `${inset}px`,
-    ...(visibleHeight ? { "--vv-height": `${visibleHeight}px` } : {}),
-  } as React.CSSProperties
-
-  // Al tocar un campo, que quede a la vista cuando el teclado termine de abrirse.
-  const revealField = (event: React.FocusEvent<HTMLDivElement>) => {
-    onFocus?.(event)
-    const field = event.target
-    if (!(field instanceof HTMLElement) || !field.matches("input, textarea, select")) return
-    if (window.matchMedia("(min-width: 40rem)").matches) return
-    window.setTimeout(() => {
-      // Si el navegador ya lo dejó a la vista, no se mueve otra vez (era el segundo salto).
-      const vv = window.visualViewport
-      const rect = field.getBoundingClientRect()
-      const top = vv ? vv.offsetTop : 0
-      const bottom = vv ? vv.offsetTop + vv.height : window.innerHeight
-      if (rect.top >= top && rect.bottom <= bottom) return
-      field.scrollIntoView({ block: "nearest" })
-    }, 300)
-  }
-
   return (
     <DialogPortal>
       <DialogOverlay />
@@ -90,12 +62,10 @@ function DialogContent({
         data-slot="dialog-content"
         className={cn(
           // Móvil: hoja inferior. Escritorio: modal centrado.
-          "fixed inset-x-0 bottom-(--kb-inset) z-50 grid max-h-[min(92dvh,calc(var(--vv-height,100dvh)-1rem))] w-full gap-5 overflow-y-auto rounded-t-2xl bg-popover p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] text-sm text-popover-foreground shadow-(--shadow-pop) outline-none ease-(--ease-drawer) data-open:animate-in data-open:fade-in-0 data-open:slide-in-from-bottom data-open:duration-300 data-closed:animate-out data-closed:fade-out-0 data-closed:slide-out-to-bottom data-closed:duration-200",
-          "sm:max-h-[92dvh] sm:inset-x-auto sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:p-6 sm:ease-(--ease-out-strong) sm:data-open:slide-in-from-bottom-2 sm:data-open:zoom-in-[0.97] sm:data-open:duration-200 sm:data-closed:slide-out-to-bottom-0 sm:data-closed:zoom-out-[0.97] sm:data-closed:duration-150",
+          "fixed inset-x-0 bottom-0 z-50 grid max-h-[92dvh] w-full gap-5 overflow-y-auto rounded-t-2xl bg-popover p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] text-sm text-popover-foreground shadow-(--shadow-pop) outline-none ease-(--ease-drawer) data-open:animate-in data-open:fade-in-0 data-open:slide-in-from-bottom data-open:duration-300 data-closed:animate-out data-closed:fade-out-0 data-closed:slide-out-to-bottom data-closed:duration-200",
+          "sm:inset-x-auto sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:p-6 sm:ease-(--ease-out-strong) sm:data-open:slide-in-from-bottom-2 sm:data-open:zoom-in-[0.97] sm:data-open:duration-200 sm:data-closed:slide-out-to-bottom-0 sm:data-closed:zoom-out-[0.97] sm:data-closed:duration-150",
           className
         )}
-        style={{ ...keyboardStyle, ...style }}
-        onFocus={revealField}
         {...props}
       >
         {children}
