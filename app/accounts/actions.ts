@@ -1,6 +1,9 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { NO_SESSION_ERROR, requireUser } from '@/lib/auth'
+import { userError } from '@/lib/errors'
+import { removeAttachmentFiles } from '@/lib/storage-cleanup'
 import { accountSchema } from '@/lib/validation/account-schemas'
 import { eurosToCents } from '@/lib/money'
 import { firstOfNextMonth } from '@/lib/interest'
@@ -43,7 +46,7 @@ export async function createAccount(formData: FormData) {
   })
 
   if (error) {
-    return { error: error.message }
+    return { error: userError(error) }
   }
 
   revalidatePath('/accounts')
@@ -64,6 +67,7 @@ export async function updateAccount(id: string, formData: FormData) {
   }
 
   const supabase = await createClient()
+  if (!(await requireUser(supabase))) return { error: NO_SESSION_ERROR }
   const { data: current } = await supabase
     .from('accounts')
     .select('interest_next_date')
@@ -89,7 +93,7 @@ export async function updateAccount(id: string, formData: FormData) {
     .maybeSingle()
 
   if (error) {
-    return { error: error.message }
+    return { error: userError(error) }
   }
   if (!data) {
     return { error: 'La cuenta no existe' }
@@ -102,7 +106,23 @@ export async function updateAccount(id: string, formData: FormData) {
 
 export async function deleteAccount(id: string) {
   const supabase = await createClient()
-  // Desde la migración 0004 sus movimientos (y adjuntos) se borran en cascada.
+  if (!(await requireUser(supabase))) return { error: NO_SESSION_ERROR }
+
+  // Desde la migración 0004 sus movimientos (y las filas de adjuntos) se borran en
+  // cascada, pero los archivos de Storage no: se apuntan antes y se borran después.
+  const paths: string[] = []
+  for (let from = 0; ; from += 1000) {
+    const { data: page, error: pathsError } = await supabase
+      .from('attachments')
+      .select('id, storage_path, transactions!inner(account_id)')
+      .eq('transactions.account_id', id)
+      .order('id')
+      .range(from, from + 999)
+    if (pathsError) return { error: userError(pathsError) }
+    paths.push(...(page ?? []).map((a) => a.storage_path))
+    if ((page?.length ?? 0) < 1000) break
+  }
+
   const { data: deleted, error } = await supabase
     .from('accounts')
     .delete()
@@ -110,10 +130,13 @@ export async function deleteAccount(id: string) {
     .select('id')
 
   if (error) {
-    return { error: error.message }
+    return { error: userError(error) }
   }
   // La RLS convierte un id ajeno o inexistente en «0 filas», no en error.
   if (!deleted?.length) return { error: 'No se ha encontrado: puede que ya estuviera borrado' }
+
+  // Con la cuenta ya borrada; si algún archivo no se puede quitar, queda registrado.
+  if (paths.length > 0) await removeAttachmentFiles(supabase, paths)
 
   revalidatePath('/accounts')
   revalidatePath('/')

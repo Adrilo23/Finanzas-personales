@@ -1,6 +1,8 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { NO_SESSION_ERROR, requireUser } from '@/lib/auth'
+import { userError } from '@/lib/errors'
 import { holdingSchema, operationSchema } from '@/lib/validation/investment-schemas'
 import { eurosToCents } from '@/lib/money'
 import { roundUnits } from '@/lib/investments'
@@ -78,7 +80,7 @@ export async function addHolding(accountId: string, formData: FormData) {
   })
   if (error) {
     if (error.code === '23505') return { error: 'Ese activo ya está en esta cuenta.' }
-    return { error: error.message }
+    return { error: userError(error) }
   }
 
   // Precios de los últimos meses, para que el valor aparezca al momento.
@@ -94,13 +96,14 @@ export async function addHolding(accountId: string, formData: FormData) {
 
 export async function deleteHolding(id: string, accountId: string) {
   const supabase = await createClient()
+  if (!(await requireUser(supabase))) return { error: NO_SESSION_ERROR }
   const { data: deleted, error } = await supabase
     .from('holdings')
     .delete()
     .eq('id', id)
     .select('id')
   if (error) {
-    return { error: error.message }
+    return { error: userError(error) }
   }
   // La RLS convierte un id ajeno o inexistente en «0 filas», no en error.
   if (!deleted?.length) return { error: 'No se ha encontrado: puede que ya estuviera borrado' }
@@ -153,7 +156,7 @@ export async function addOperation(holdingId: string, formData: FormData) {
     affects_cash: parsed.data.affectsCash,
   })
   if (error) {
-    return { error: error.message }
+    return { error: userError(error) }
   }
 
   revalidateInvestmentViews(holding.account_id)
@@ -162,13 +165,14 @@ export async function addOperation(holdingId: string, formData: FormData) {
 
 export async function deleteOperation(id: string, accountId: string) {
   const supabase = await createClient()
+  if (!(await requireUser(supabase))) return { error: NO_SESSION_ERROR }
   const { data: deleted, error } = await supabase
     .from('holding_operations')
     .delete()
     .eq('id', id)
     .select('id')
   if (error) {
-    return { error: error.message }
+    return { error: userError(error) }
   }
   // La RLS convierte un id ajeno o inexistente en «0 filas», no en error.
   if (!deleted?.length) return { error: 'No se ha encontrado: puede que ya estuviera borrado' }
@@ -189,6 +193,7 @@ export async function confirmOperation(id: string, accountId: string, formData: 
   const amount = parsedAmount.data
 
   const supabase = await createClient()
+  if (!(await requireUser(supabase))) return { error: NO_SESSION_ERROR }
   const { data, error } = await supabase
     .from('holding_operations')
     .update({ units, amount_cents: eurosToCents(amount), status: 'confirmed' })
@@ -198,7 +203,7 @@ export async function confirmOperation(id: string, accountId: string, formData: 
     .maybeSingle()
 
   if (error) {
-    return { error: error.message }
+    return { error: userError(error) }
   }
   if (!data) {
     return { error: 'La operación ya estaba confirmada o no existe' }

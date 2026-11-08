@@ -217,6 +217,16 @@ accounts 1───N holdings 1───N holding_operations
 ### Registro sin conexión — `0016`
 - **`transactions.client_id`** (`uuid`, nulo): lo genera el navegador para cada movimiento de la cola sin conexión. Índice único parcial `(user_id, client_id) where client_id is not null`: un reintento falla con `23505` y `createTransaction` lo trata como «ya guardado», así que no duplica el dinero.
 
+### Correcciones de la auditoría de seguridad — `0017`
+- **`rate_events`** (`user_id`, `action`, `created_at`): RLS activado, sin políticas y sin permisos para `anon`/`authenticated`. Solo la usa **`check_rate_limit(p_action, p_max, p_window)`** (`security definer`, solo `authenticated`, usa `auth.uid()`): devuelve `false` al superar el límite. La app la llama con `allowAction` (`lib/rate-limit.ts`) para el informe por correo (5/hora) y las exportaciones (20/10 min).
+- **`run_contribution_plan`**: `select … for update` sobre la regla y error «Plan ya procesado» si alguna fecha es anterior a `next_run_date` (dos cargas simultáneas ya no duplican).
+- **`holding_operations`**: las políticas de insert/update comprueban también `owns_recurring_rule(recurring_rule_id)`.
+- **Permisos:** `update_transfer`, `run_contribution_plan`, `update_recurring_transfer`, `convert_to_transfer`, los `owns_*`, `delete_my_account` y `check_rate_limit` solo para `authenticated`; `anon` sin acceso a las tablas del esquema `public` (y sin privilegios por defecto en las futuras). Las funciones del limitador de login siguen abiertas a `anon`.
+- **Limitador de login:** índice en `login_attempts(window_start)` y tope de 100 000 filas en `login_throttle_fail`.
+- **Restricciones (`not valid`, solo para lo nuevo):** longitudes máximas de `transactions.description` (500), `accounts.name` y `categories.name` (1-80), `goal_contributions.note` (500) y `attachments.file_name` (255); `recurring_rules`: un traspaso exige `amount_cents > 0`. Las restricciones de importe de `0014` siguen sin validar las filas antiguas (por ejemplo, movimientos de 0 céntimos).
+- **Trigger `transactions_enforce_sign`** (`before insert or update of amount_cents, category_id`): con categoría, un `income` no puede ser negativo ni un `expense`/`investment` positivo. Sin categoría (traspasos) no se comprueba y el borrado lógico no lo activa.
+- **Índices** en las FK que faltaban (`transactions.recurring_rule_id`, `recurring_rules.{account_id,to_account_id,category_id}`, `recurring_allocations.{holding_id,user_id}`, `holding_operations.recurring_rule_id`, `goal_contributions.user_id`, `savings_goals.account_id`, `budgets.category_id`) y `search_path = public, pg_temp` en las funciones `security definer`.
+
 ## Vistas y cálculos derivados
 
 - **`account_balances`** (`0002`, recreada en `0007` y `0008`, `security_invoker`): `cash_cents` = saldo inicial + movimientos no borrados − compras + ventas (las que tienen `affects_cash`); `balance_cents` = `cash_cents` + `market_value_cents` (valor de mercado de sus activos). Las columnas de la vista salen anulables en los tipos generados.

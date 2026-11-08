@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { loginSchema, registerSchema } from '@/lib/validation/auth-schemas'
+import { loginSchema, MIN_PASSWORD_LENGTH, registerSchema } from '@/lib/validation/auth-schemas'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { clientIp, throttleKeys, throttleMessage } from '@/lib/login-throttle'
@@ -78,7 +78,15 @@ export async function register(formData: FormData) {
   })
 
   if (error) {
-    return { error: error.message }
+    if (error.code === 'weak_password') {
+      return { error: `La contraseña es demasiado débil. Usa al menos ${MIN_PASSWORD_LENGTH} caracteres.` }
+    }
+    if (error.status === 429) {
+      return { error: 'Demasiados intentos. Espera unos minutos y vuelve a probar.' }
+    }
+    // Mensaje único: no revela si el email ya está registrado (el texto de Supabase lo haría).
+    console.error('register', error.code, error.message)
+    return { error: 'No se ha podido crear la cuenta. Revisa los datos e inténtalo de nuevo.' }
   }
 
   redirect('/register/check-email')

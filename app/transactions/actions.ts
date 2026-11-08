@@ -1,6 +1,8 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { NO_SESSION_ERROR, requireUser } from '@/lib/auth'
+import { userError } from '@/lib/errors'
 import {
   convertToTransferSchema,
   transactionSchema,
@@ -90,7 +92,7 @@ export async function createTransaction(formData: FormData) {
 
   // 23505 con client_id: es el reintento de un movimiento que ya se guardó.
   if (error && !(clientId.success && error.code === '23505')) {
-    return { error: error.message }
+    return { error: userError(error) }
   }
 
   revalidateMoneyViews()
@@ -100,6 +102,7 @@ export async function createTransaction(formData: FormData) {
 /** Edición directa (decisión del roadmap); updated_at lo actualiza un trigger. */
 export async function updateTransaction(id: string, formData: FormData) {
   const supabase = await createClient()
+  if (!(await requireUser(supabase))) return { error: NO_SESSION_ERROR }
 
   const result = await parseTransaction(supabase, formData)
   if ('error' in result) {
@@ -115,7 +118,7 @@ export async function updateTransaction(id: string, formData: FormData) {
     .maybeSingle()
 
   if (error) {
-    return { error: error.message }
+    return { error: userError(error) }
   }
   if (!data) {
     return { error: 'El movimiento no existe o se ha eliminado' }
@@ -171,7 +174,7 @@ export async function createTransfer(formData: FormData) {
     })
   )
   if (error) {
-    return { error: error.message }
+    return { error: userError(error) }
   }
 
   revalidateMoneyViews()
@@ -186,6 +189,7 @@ export async function updateTransfer(transferId: string, formData: FormData) {
   }
 
   const supabase = await createClient()
+  if (!(await requireUser(supabase))) return { error: NO_SESSION_ERROR }
   const { error } = await supabase.rpc('update_transfer', {
     p_transfer_id: transferId,
     p_from_account: parsed.data.fromAccountId,
@@ -195,7 +199,7 @@ export async function updateTransfer(transferId: string, formData: FormData) {
     p_description: parsed.data.description || '',
   })
   if (error) {
-    return { error: error.message }
+    return { error: userError(error) }
   }
 
   revalidateMoneyViews()
@@ -217,12 +221,13 @@ export async function convertToTransfer(formData: FormData) {
   }
 
   const supabase = await createClient()
+  if (!(await requireUser(supabase))) return { error: NO_SESSION_ERROR }
   const { error } = await supabase.rpc('convert_to_transfer', {
     p_transaction_id: parsed.data.transactionId,
     p_to_account: parsed.data.toAccountId,
   })
   if (error) {
-    return { error: error.message }
+    return { error: userError(error) }
   }
 
   revalidateMoneyViews()
@@ -232,6 +237,7 @@ export async function convertToTransfer(formData: FormData) {
 
 export async function deleteTransaction(id: string) {
   const supabase = await createClient()
+  if (!(await requireUser(supabase))) return { error: NO_SESSION_ERROR }
   // Si es una pata de un traspaso, se borran las dos.
   const { data: row } = await supabase
     .from('transactions')
@@ -246,7 +252,7 @@ export async function deleteTransaction(id: string) {
     : await deletion.eq('id', id).is('deleted_at', null).select('id')
 
   if (error) {
-    return { error: error.message }
+    return { error: userError(error) }
   }
   // La RLS convierte un id ajeno o inexistente en «0 filas», no en error.
   if (!deleted?.length) return { error: 'No se ha encontrado: puede que ya estuviera borrado' }

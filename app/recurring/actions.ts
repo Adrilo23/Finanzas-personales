@@ -1,6 +1,8 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { NO_SESSION_ERROR, requireUser } from '@/lib/auth'
+import { userError } from '@/lib/errors'
 import { recurringSchema, recurringTransferSchema } from '@/lib/validation/recurring-schemas'
 import { eurosToCents } from '@/lib/money'
 import { validateAllocations, type Allocation } from '@/lib/allocations'
@@ -153,7 +155,7 @@ export async function createRecurringRule(formData: FormData) {
     .insert({ ...result.row, user_id: user.id, active: true })
 
   if (error) {
-    return { error: error.message }
+    return { error: userError(error) }
   }
 
   revalidatePath('/recurring')
@@ -174,7 +176,7 @@ async function createRecurringTransfer(supabase: Supabase, userId: string, formD
     .single()
 
   if (error || !rule) {
-    return { error: error?.message ?? 'No se ha podido crear la regla' }
+    return { error: error ? userError(error, 'No se ha podido crear la regla') : 'No se ha podido crear la regla' }
   }
 
   if (result.allocations.length > 0) {
@@ -189,7 +191,7 @@ async function createRecurringTransfer(supabase: Supabase, userId: string, formD
     if (allocationsError) {
       // Sin reparto la regla no es lo que el usuario pidió: se deshace.
       await supabase.from('recurring_rules').delete().eq('id', rule.id)
-      return { error: allocationsError.message }
+      return { error: userError(allocationsError) }
     }
   }
 
@@ -230,7 +232,7 @@ export async function updateRecurringRule(id: string, formData: FormData) {
       })),
     })
     if (error) {
-      return { error: error.message }
+      return { error: userError(error) }
     }
   } else {
     const result = await parseMovementRule(supabase, formData)
@@ -244,7 +246,7 @@ export async function updateRecurringRule(id: string, formData: FormData) {
       .is('to_account_id', null)
       .select('id')
     if (error) {
-      return { error: error.message }
+      return { error: userError(error) }
     }
     if (!data?.length) {
       return { error: 'La regla no existe' }
@@ -257,10 +259,11 @@ export async function updateRecurringRule(id: string, formData: FormData) {
 
 export async function toggleRecurringRule(id: string, active: boolean) {
   const supabase = await createClient()
+  if (!(await requireUser(supabase))) return { error: NO_SESSION_ERROR }
   const { error } = await supabase.from('recurring_rules').update({ active }).eq('id', id)
 
   if (error) {
-    return { error: error.message }
+    return { error: userError(error) }
   }
 
   revalidatePath('/recurring')
@@ -269,6 +272,7 @@ export async function toggleRecurringRule(id: string, active: boolean) {
 
 export async function deleteRecurringRule(id: string) {
   const supabase = await createClient()
+  if (!(await requireUser(supabase))) return { error: NO_SESSION_ERROR }
   const { data: deleted, error } = await supabase
     .from('recurring_rules')
     .delete()
@@ -276,7 +280,7 @@ export async function deleteRecurringRule(id: string) {
     .select('id')
 
   if (error) {
-    return { error: error.message }
+    return { error: userError(error) }
   }
   // La RLS convierte un id ajeno o inexistente en «0 filas», no en error.
   if (!deleted?.length) return { error: 'No se ha encontrado: puede que ya estuviera borrado' }

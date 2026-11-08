@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { getAnnualReport, parseYearParam } from '@/lib/annual-report'
 import { buildAnnualReportPdf } from '@/lib/annual-report-pdf'
+import { allowAction, TOO_MANY_REQUESTS } from '@/lib/rate-limit'
 
 export const runtime = 'nodejs'
 
@@ -11,6 +12,9 @@ export async function GET(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return new NextResponse('No autenticado', { status: 401 })
+  if (!(await allowAction(supabase, 'export', 20, '10 minutes'))) {
+    return new NextResponse(TOO_MANY_REQUESTS, { status: 429 })
+  }
 
   const now = new Date()
   const year = parseYearParam(new URL(request.url).searchParams.get('year'), now)

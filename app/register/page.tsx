@@ -65,7 +65,7 @@ export default function RegisterPage() {
           {errors.password ? (
             <FieldError>{errors.password.message}</FieldError>
           ) : (
-            <FieldHint>Al menos 6 caracteres.</FieldHint>
+            <FieldHint>Al menos 10 caracteres.</FieldHint>
           )}
         </Field>
 

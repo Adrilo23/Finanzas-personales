@@ -1,6 +1,8 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { NO_SESSION_ERROR, requireUser } from '@/lib/auth'
+import { userError } from '@/lib/errors'
 import { budgetSchema } from '@/lib/validation/budget-schemas'
 import { eurosToCents } from '@/lib/money'
 import { revalidatePath } from 'next/cache'
@@ -47,7 +49,7 @@ export async function upsertBudget(formData: FormData) {
   )
 
   if (error) {
-    return { error: error.message }
+    return { error: userError(error) }
   }
 
   revalidatePath('/budgets')
@@ -57,6 +59,7 @@ export async function upsertBudget(formData: FormData) {
 
 export async function deleteBudget(id: string) {
   const supabase = await createClient()
+  if (!(await requireUser(supabase))) return { error: NO_SESSION_ERROR }
   const { data: deleted, error } = await supabase
     .from('budgets')
     .delete()
@@ -64,7 +67,7 @@ export async function deleteBudget(id: string) {
     .select('id')
 
   if (error) {
-    return { error: error.message }
+    return { error: userError(error) }
   }
   // La RLS convierte un id ajeno o inexistente en «0 filas», no en error.
   if (!deleted?.length) return { error: 'No se ha encontrado: puede que ya estuviera borrado' }

@@ -26,6 +26,22 @@ describe('throttleKeys', () => {
     expect(throttleKeys('1.2.3.5', 'ana@example.com')[0]).not.toBe(throttleKeys('1.2.3.4', 'ana@example.com')[0])
   })
 
+  it('con secreto las claves cambian y dependen de él (HMAC)', () => {
+    const plain = throttleKeys('1.2.3.4', 'ana@example.com', undefined)
+    const a = throttleKeys('1.2.3.4', 'ana@example.com', 'secreto-a')
+    const b = throttleKeys('1.2.3.4', 'ana@example.com', 'secreto-b')
+    expect(a[0]).toMatch(/^pair:[0-9a-f]{64}$/)
+    expect(a).not.toEqual(plain)
+    expect(a).not.toEqual(b)
+    expect(throttleKeys('1.2.3.4', 'ana@example.com', 'secreto-a')).toEqual(a)
+  })
+
+  it('sin IP conocida solo hay clave de pareja, no la de IP compartida', () => {
+    const keys = throttleKeys('desconocida', 'ana@example.com', undefined)
+    expect(keys).toHaveLength(1)
+    expect(keys[0]).toMatch(/^pair:/)
+  })
+
   it('no guarda la IP ni el email en claro', () => {
     expect(throttleKeys('1.2.3.4', 'ana@example.com').join()).not.toMatch(/1\.2\.3\.4|ana@/)
   })
