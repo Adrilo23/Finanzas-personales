@@ -34,7 +34,7 @@ Los tests (Vitest, entorno node, `TZ=Europe/Madrid`) cubren la lógica pura de `
 
 Para comprobar cambios de UI en un navegador real está el MCP de Playwright (`.mcp.json`): arranca `npm run dev` y navega a `http://localhost:3000`. Inicia sesión con un usuario de pruebas, nunca con la cuenta real.
 
-Variables de entorno (en `.env.local`): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Opcionales, solo servidor: `RESEND_API_KEY` y `EMAIL_FROM` para enviar el informe mensual por correo (`lib/email.ts`); sin ellas, el botón «Envíamelo» responde que el envío no está configurado.
+Variables de entorno (en `.env.local`): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Opcionales, solo servidor: `RESEND_API_KEY` y `EMAIL_FROM` para enviar el informe mensual por correo (`lib/email.ts`); sin ellas, el botón «Envíamelo» responde que el envío no está configurado. Recomendada, solo servidor: `THROTTLE_SECRET` (cadena aleatoria larga) para que las claves del limitador de login sean un HMAC y nadie pueda calcular la de otra IP o email; sin ella usa SHA-256 plano (`lib/login-throttle.ts`).
 
 ## Arquitectura
 
@@ -104,6 +104,14 @@ Sin sesión, `/` pinta la landing (`app/landing.tsx`) en vez del inicio, y `/dem
 ### Seguridad
 - **Cabeceras:** `proxy.ts` genera un nonce por petición y la CSP (`buildCsp` en `lib/security-headers.ts`): scripts solo con nonce, `frame-ancestors 'none'`, `connect-src` limitado a la app y Supabase. Next pone el nonce en sus scripts porque todas las páginas son dinámicas; una página estática no lo recibiría. Las cabeceras fijas (`X-Frame-Options`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`) están en `next.config.ts`. Si añades un origen externo (fuente, API desde el navegador), añádelo a la CSP.
 - **Login:** `login` limita los fallos por IP+email (5 en 15 min) y por IP (30) con las funciones `login_throttle_status` / `login_throttle_fail` (migración `0014`, tabla `login_attempts` sin acceso directo) y responde siempre «Email o contraseña incorrectos». Si el limitador falla, no bloquea el login.
+- **Auditoría de seguridad (2026-11-08, migración `0017`):**
+  - Toda Server Action empieza con `requireUser` (`lib/auth.ts`, devuelve `NO_SESSION_ERROR`) y los errores de Supabase pasan por `userError` (`lib/errors.ts`): nunca `error.message` al cliente.
+  - Envío del informe y exportaciones tienen límite por usuario con `allowAction` (`lib/rate-limit.ts`, RPC `check_rate_limit`, tabla `rate_events` sin acceso directo); si la RPC falla, deja pasar.
+  - El service worker no cachea exportaciones ni otros orígenes (`app/sw.ts`) y `ClearSessionCaches` borra las cachés de páginas al llegar a `/login`.
+  - `/auth/callback` solo redirige a rutas internas (`lib/safe-redirect.ts`). El registro exige 10 caracteres y responde siempre igual; el login no exige longitud (cuentas antiguas).
+  - Borrar la cuenta pide la contraseña y vacía toda la carpeta del usuario en Storage (`lib/storage-cleanup.ts`); borrar una cuenta bancaria borra antes sus archivos de adjuntos.
+  - La BD impone el signo según el tipo de categoría (trigger `transactions_enforce_sign`), la pertenencia de `holding_operations.recurring_rule_id` y que `anon` no toque tablas.
+  - `run_contribution_plan` bloquea la regla (`for update`) y los recurrentes normales reservan el periodo con un `update` condicional antes de insertar: dos pestañas no duplican.
 - **Descargas** (PDF/XLSX): `Cache-Control: private, no-store`.
 - **Dependencias:** `npm audit --omit=dev` debe quedar a 0. `xlsx` se instala desde el CDN oficial de SheetJS (la versión de npm está abandonada y tiene avisos). Los avisos que quedan son de herramientas de desarrollo (eslint, build de Serwist, CLI de shadcn) y no llegan a producción.
 

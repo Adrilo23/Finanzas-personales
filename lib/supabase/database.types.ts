@@ -667,6 +667,10 @@ export type Database = {
       }
     }
     Functions: {
+      check_rate_limit: {
+        Args: { p_action: string; p_max: number; p_window: string }
+        Returns: boolean
+      }
       convert_to_transfer: {
         Args: { p_to_account: string; p_transaction_id: string }
         Returns: string

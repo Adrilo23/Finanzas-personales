@@ -2,6 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { NO_SESSION_ERROR, requireUser } from '@/lib/auth'
+import { userError } from '@/lib/errors'
 import { eurosToCents } from '@/lib/money'
 import { contributionSchema, goalSchema } from '@/lib/validation/goal-schemas'
 
@@ -42,19 +44,20 @@ export async function saveGoal(formData: FormData) {
       ? await supabase.from('savings_goals').update(values).eq('id', id)
       : await supabase.from('savings_goals').insert({ ...values, user_id: user.id })
 
-  if (error) return { error: error.message }
+  if (error) return { error: userError(error) }
   revalidateGoals()
   return { success: true }
 }
 
 export async function deleteGoal(id: string) {
   const supabase = await createClient()
+  if (!(await requireUser(supabase))) return { error: NO_SESSION_ERROR }
   const { data: deleted, error } = await supabase
     .from('savings_goals')
     .delete()
     .eq('id', id)
     .select('id')
-  if (error) return { error: error.message }
+  if (error) return { error: userError(error) }
   // La RLS convierte un id ajeno o inexistente en «0 filas», no en error.
   if (!deleted?.length) return { error: 'No se ha encontrado: puede que ya estuviera borrado' }
   revalidateGoals()
@@ -107,7 +110,7 @@ export async function addContribution(formData: FormData) {
     contribution_date: parsed.data.date,
     note: parsed.data.note || null,
   })
-  if (error) return { error: error.message }
+  if (error) return { error: userError(error) }
 
   revalidateGoals()
   return { success: true }
@@ -115,12 +118,13 @@ export async function addContribution(formData: FormData) {
 
 export async function deleteContribution(id: string) {
   const supabase = await createClient()
+  if (!(await requireUser(supabase))) return { error: NO_SESSION_ERROR }
   const { data: deleted, error } = await supabase
     .from('goal_contributions')
     .delete()
     .eq('id', id)
     .select('id')
-  if (error) return { error: error.message }
+  if (error) return { error: userError(error) }
   // La RLS convierte un id ajeno o inexistente en «0 filas», no en error.
   if (!deleted?.length) return { error: 'No se ha encontrado: puede que ya estuviera borrado' }
   revalidateGoals()

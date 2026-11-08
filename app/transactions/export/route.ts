@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { formatCents } from '@/lib/money'
+import { fetchAllRows } from '@/lib/fetch-all'
+import { allowAction, TOO_MANY_REQUESTS } from '@/lib/rate-limit'
 import * as XLSX from 'xlsx'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -39,6 +41,10 @@ export async function GET(request: NextRequest) {
     return new NextResponse('No autenticado', { status: 401 })
   }
 
+  if (!(await allowAction(supabase, 'export', 20, '10 minutes'))) {
+    return new NextResponse(TOO_MANY_REQUESTS, { status: 429 })
+  }
+
   let query = supabase
     .from('transactions')
     .select(
@@ -46,14 +52,21 @@ export async function GET(request: NextRequest) {
     )
     .is('deleted_at', null)
     .order('transaction_date', { ascending: false })
+    // Orden estable para que las páginas de fetchAllRows no se solapen.
+    .order('id')
 
   if (accountId) query = query.eq('account_id', accountId)
   if (categoryId) query = query.eq('category_id', categoryId)
   if (from) query = query.gte('transaction_date', from)
   if (to) query = query.lte('transaction_date', to)
 
-  const { data } = await query
-  const rows = (data ?? []) as Row[]
+  // PostgREST corta cada respuesta en 1000 filas sin avisar: se pide por páginas.
+  let rows: Row[]
+  try {
+    rows = (await fetchAllRows((a, b) => query.range(a, b))) as Row[]
+  } catch {
+    return new NextResponse('No se ha podido generar la exportación', { status: 500 })
+  }
 
   const headers = ['Fecha', 'Cuenta', 'Categoría', 'Descripción', 'Importe']
   const tableRows = rows.map((t) => {

@@ -7,6 +7,7 @@ import { getMonthlyReport, parseMonthParam } from '@/lib/monthly-report'
 import { buildMonthlyReportPdf } from '@/lib/monthly-report-pdf'
 import { buildMonthlyReportEmail } from '@/lib/monthly-report-email'
 import { EmailNotConfiguredError, resendProvider } from '@/lib/email'
+import { allowAction, TOO_MANY_REQUESTS } from '@/lib/rate-limit'
 
 /**
  * Envía el informe del mes (resumen + PDF adjunto) al correo del usuario con sesión.
@@ -18,6 +19,11 @@ export async function sendMonthlyReport(month: string) {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user?.email) return { error: 'No autenticado' }
+
+  // Cada envío gasta cuota de Resend y genera un PDF: 5 por hora y usuario.
+  if (!(await allowAction(supabase, 'monthly_report_email', 5, '1 hour'))) {
+    return { error: TOO_MANY_REQUESTS }
+  }
 
   const date = parseMonthParam(month, new Date())
   const report = await getMonthlyReport(date)

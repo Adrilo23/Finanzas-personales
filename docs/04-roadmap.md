@@ -129,6 +129,14 @@ Idea surgida al usar la app: una cuenta como MyInvestor contiene fondos cuyo val
 
 ---
 
+## Auditoría de seguridad (2026-11-08)
+- [~] Revisión con los agentes `security-reviewer` (aplicación) y `database-reviewer` (RLS y migraciones): sin hallazgos críticos ni altos; ningún usuario autenticado puede leer ni modificar datos de otro. Correcciones aplicadas en el código y en la migración `0017` (ver `03-modelo-de-datos.md` y la sección «Seguridad» de `CLAUDE.md`): caché del service worker, archivos huérfanos en Storage, redirección abierta, contraseña mínima de 10, errores genéricos, `requireUser` en todas las actions, límite de frecuencia, HMAC en el limitador de login, duplicados en recurrentes y planes, permisos de `anon`, trigger de signo, índices, y exportación de movimientos paginada (antes se cortaba a 1000 filas)
+  - **Pendiente (lo tienes que hacer tú):**
+    1. Aplicar la migración `0017` (`npx supabase db push --remote`) y después `npm run db:types`
+    2. Definir `THROTTLE_SECRET` en Vercel (cadena aleatoria larga); sin ella el limitador usa SHA-256 plano
+    3. En el panel de Supabase Auth: subir la longitud mínima de contraseña a 10, activar CAPTCHA y revisar los límites de peticiones (el limitador de la app se salta yendo directo al endpoint de Auth)
+  - **No aplicado a propósito:** el índice único por `(recurring_rule_id, transaction_date, account_id)` (los planes con reparto repiten regla, fecha y cuenta, y fallaría); la URL del enlace de confirmación sigue saliendo del host de la petición (en Vercel lo valida el enrutado); `validate constraint` de las restricciones de `0014` (hay que limpiar antes los movimientos de 0 céntimos); la cola sin conexión conserva los pendientes del usuario tras cerrar sesión para no perder datos sin sincronizar
+
 ## Decisiones (antes "pendientes")
 - **¿Impedir movimientos o traspasos que dejen una cuenta en negativo?** (auditoría F-07, 2026-11-03) — No. La app registra lo que ya ha pasado en el banco, no mueve dinero: una tarjeta de crédito, un descubierto o un traspaso anotado antes que la nómina dejan saldos negativos legítimos, y bloquearlos obligaría a falsear el orden real. El riesgo de la auditoría (un usuario solo puede alterar sus propios saldos) se acota con el tope de 1.000 millones de € por importe y los `check` de la BD.
 - **¿Editar/borrar transacciones directamente o solo con movimientos de ajuste?** — Edición directa y borrado lógico (`deleted_at`). `updated_at` registra cuándo se modificó; si se pasa a SaaS se puede añadir auditoría de cambios.

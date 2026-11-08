@@ -2,6 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { NO_SESSION_ERROR, requireUser } from '@/lib/auth'
+import { userError } from '@/lib/errors'
 import {
   attachmentPath,
   isOwnAttachmentPath,
@@ -16,13 +18,6 @@ import {
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>
 
-async function currentUser(supabase: SupabaseServer) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  return user
-}
-
 /** El movimiento existe, no está borrado y es del usuario (la RLS filtra lo ajeno). */
 async function ownsTransaction(supabase: SupabaseServer, transactionId: string) {
   const { data } = await supabase
@@ -36,6 +31,7 @@ async function ownsTransaction(supabase: SupabaseServer, transactionId: string) 
 
 export async function listAttachments(transactionId: string) {
   const supabase = await createClient()
+  if (!(await requireUser(supabase))) return []
   const { data } = await supabase
     .from('attachments')
     .select('id, file_name')
@@ -53,7 +49,7 @@ export async function prepareAttachmentUpload(
   if (invalid) return { error: invalid }
 
   const supabase = await createClient()
-  const user = await currentUser(supabase)
+  const user = await requireUser(supabase)
   if (!user) return { error: 'Tu sesión ha caducado. Vuelve a iniciar sesión.' }
   if (!(await ownsTransaction(supabase, transactionId))) return { error: 'Movimiento no válido' }
 
@@ -67,8 +63,8 @@ export async function prepareAttachmentUpload(
 /** Registra un adjunto ya subido. La ruta tiene que ser del usuario y de ese movimiento. */
 export async function createAttachment(transactionId: string, storagePath: string, fileName: string) {
   const supabase = await createClient()
-  const user = await currentUser(supabase)
-  if (!user) return { error: 'No autenticado' }
+  const user = await requireUser(supabase)
+  if (!user) return { error: NO_SESSION_ERROR }
 
   if (!isOwnAttachmentPath(storagePath, user.id, transactionId)) {
     return { error: 'Ruta de adjunto no válida' }
@@ -81,7 +77,7 @@ export async function createAttachment(transactionId: string, storagePath: strin
     storage_path: storagePath,
     file_name: fileName.slice(0, 200),
   })
-  if (error) return { error: error.message }
+  if (error) return { error: userError(error) }
 
   revalidatePath('/transactions')
   return { success: true }
@@ -90,6 +86,7 @@ export async function createAttachment(transactionId: string, storagePath: strin
 /** Enlace temporal (60 s) para ver un adjunto propio. */
 export async function getAttachmentUrl(id: string) {
   const supabase = await createClient()
+  if (!(await requireUser(supabase))) return { error: NO_SESSION_ERROR }
   const { data: row } = await supabase
     .from('attachments')
     .select('storage_path')
@@ -104,6 +101,7 @@ export async function getAttachmentUrl(id: string) {
 
 export async function deleteAttachment(id: string) {
   const supabase = await createClient()
+  if (!(await requireUser(supabase))) return { error: NO_SESSION_ERROR }
 
   // La ruta sale de la fila (propia, por RLS), no de lo que mande el cliente.
   const { data: row } = await supabase
@@ -117,10 +115,13 @@ export async function deleteAttachment(id: string) {
   const { error: storageError } = await supabase.storage
     .from('attachments')
     .remove([row.storage_path])
-  if (storageError) return { error: storageError.message }
+  if (storageError) {
+    console.error('[storage]', storageError.message)
+    return { error: 'No se ha podido borrar el archivo. Inténtalo de nuevo.' }
+  }
 
   const { error } = await supabase.from('attachments').delete().eq('id', id)
-  if (error) return { error: error.message }
+  if (error) return { error: userError(error) }
 
   revalidatePath('/transactions')
   return { success: true }

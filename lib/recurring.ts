@@ -110,6 +110,16 @@ export async function processRecurringRules(userId: string) {
       continue
     }
 
+    // Reserva el periodo moviendo la fecha con un update condicional: si dos cargas
+    // coinciden (dos pestañas), solo una lo consigue y la otra no duplica los movimientos.
+    const { data: reserved } = await supabase
+      .from('recurring_rules')
+      .update({ next_run_date: next })
+      .eq('id', rule.id)
+      .eq('next_run_date', rule.next_run_date)
+      .select('id')
+    if (!reserved?.length) continue
+
     const { error } = await supabase.from('transactions').insert(
       datesToInsert.map((transaction_date) => ({
         user_id: userId,
@@ -122,9 +132,13 @@ export async function processRecurringRules(userId: string) {
         recurring_rule_id: rule.id,
       }))
     )
-    // Si falla, no se adelanta la fecha: se reintentará en la siguiente carga.
-    if (error) continue
-
-    await supabase.from('recurring_rules').update({ next_run_date: next }).eq('id', rule.id)
+    // Si falla, se devuelve la fecha para reintentarlo en la siguiente carga.
+    if (error) {
+      await supabase
+        .from('recurring_rules')
+        .update({ next_run_date: rule.next_run_date })
+        .eq('id', rule.id)
+        .eq('next_run_date', next)
+    }
   }
 }

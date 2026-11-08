@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { loginSchema, type LoginInput } from '@/lib/validation/auth-schemas'
 import { login } from './actions'
 import { AuthShell } from '@/components/auth-shell'
+import { ClearSessionCaches } from '@/components/clear-session-caches'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -31,6 +32,7 @@ export default function LoginPage() {
 
   return (
     <AuthShell>
+      <ClearSessionCaches />
       <div className="mb-8 space-y-1.5">
         <h1 className="text-[1.75rem] font-semibold tracking-tight">Inicia sesión</h1>
         <p className="text-sm text-muted-foreground">Accede para ver tus cuentas y movimientos.</p>

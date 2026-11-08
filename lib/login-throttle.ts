@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto'
+import { createHash, createHmac } from 'node:crypto'
 
 /**
  * Limitador de intentos de login (auditoría F-08). Supabase Auth solo ve la IP de
@@ -10,7 +10,15 @@ import { createHash } from 'node:crypto'
  * Se guardan hashes, no la IP ni el email en claro.
  */
 
-const sha256 = (value: string) => createHash('sha256').update(value).digest('hex')
+/**
+ * Con `THROTTLE_SECRET` (solo servidor) la clave es un HMAC: sin el secreto nadie puede
+ * calcular la clave de la IP o el email de otra persona y bloquearla llamando a la
+ * función SQL, que está abierta a `anon`. Sin secreto, SHA-256 plano (menos seguro).
+ */
+const hash = (value: string, secret?: string) =>
+  secret
+    ? createHmac('sha256', secret).update(value).digest('hex')
+    : createHash('sha256').update(value).digest('hex')
 
 /** IP del cliente tras el proxy de Vercel. */
 export function clientIp(headers: { get(name: string): string | null }): string {
@@ -20,9 +28,17 @@ export function clientIp(headers: { get(name: string): string | null }): string 
   return forwarded || 'desconocida'
 }
 
-export function throttleKeys(ip: string, email: string): string[] {
+export function throttleKeys(
+  ip: string,
+  email: string,
+  secret: string | undefined = process.env.THROTTLE_SECRET
+): string[] {
   const normalizedEmail = email.trim().toLowerCase()
-  return [`pair:${sha256(`${ip}|${normalizedEmail}`)}`, `ip:${sha256(ip)}`]
+  const pair = `pair:${hash(`${ip}|${normalizedEmail}`, secret)}`
+  // Sin IP conocida no hay límite por IP: todo el mundo compartiría una misma clave y
+  // bastarían 30 fallos para bloquear el login de todos.
+  if (ip === 'desconocida') return [pair]
+  return [pair, `ip:${hash(ip, secret)}`]
 }
 
 /** «Demasiados intentos…» con los minutos que quedan (redondeando hacia arriba). */
