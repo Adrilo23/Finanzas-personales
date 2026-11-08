@@ -55,6 +55,7 @@ export async function register(formData: FormData) {
     email: formData.get('email'),
     password: formData.get('password'),
     confirmPassword: formData.get('confirmPassword'),
+    acceptTerms: formData.get('acceptTerms') === 'true',
   })
 
   if (!parsed.success) {

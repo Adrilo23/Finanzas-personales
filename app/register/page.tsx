@@ -26,6 +26,7 @@ export default function RegisterPage() {
     formData.set('email', data.email)
     formData.set('password', data.password)
     formData.set('confirmPassword', data.confirmPassword)
+    formData.set('acceptTerms', String(data.acceptTerms))
     const result = await registerUser(formData)
     if (result?.error) setServerError(result.error)
   }
@@ -79,6 +80,29 @@ export default function RegisterPage() {
             {...register('confirmPassword')}
           />
           <FieldError>{errors.confirmPassword?.message}</FieldError>
+        </Field>
+
+        <Field>
+          <label className="flex cursor-pointer items-start gap-3 text-sm">
+            <input
+              type="checkbox"
+              className="mt-0.5 size-4 shrink-0 accent-(--brand)"
+              aria-invalid={!!errors.acceptTerms}
+              {...register('acceptTerms')}
+            />
+            <span>
+              He leído y acepto los{' '}
+              <Link href="/terms" target="_blank" className="font-medium text-foreground underline underline-offset-2">
+                términos de uso
+              </Link>{' '}
+              y la{' '}
+              <Link href="/privacy" target="_blank" className="font-medium text-foreground underline underline-offset-2">
+                política de privacidad
+              </Link>
+              .
+            </span>
+          </label>
+          <FieldError>{errors.acceptTerms?.message}</FieldError>
         </Field>
 
         <FormError>{serverError}</FormError>
