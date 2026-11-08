@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { computeGoalProgress, computeGoals, type ContributionRow, type GoalRow } from './goals'
+import {
+  computeGoalProgress,
+  computeGoals,
+  linkedGoalContributions,
+  type ContributionRow,
+  type GoalRow,
+} from './goals'
 
 const now = new Date(2026, 9, 6) // 6 oct 2026
 const goal: GoalRow = {
@@ -115,5 +121,32 @@ describe('objetivo vinculado a una cuenta', () => {
     const [p] = computeGoals([linkedGoal], [c(10000, '2026-09-01')], now, new Map())
     expect(p.savedCents).toBe(10000)
     expect(p.account).toBeNull()
+  })
+})
+
+describe('linkedGoalContributions', () => {
+  const goals = [
+    { id: 'g1', name: 'Vacaciones', account_id: 'a1' },
+    { id: 'g2', name: 'Coche', account_id: 'a2' },
+    { id: 'g3', name: 'Manual', account_id: null },
+  ]
+
+  it('suma el neto de la cuenta vinculada, con entradas y salidas', () => {
+    const flows = [
+      { account_id: 'a1', amount_cents: 50_000 },
+      { account_id: 'a1', amount_cents: -12_000 },
+      { account_id: 'a9', amount_cents: 99_999 },
+    ]
+    expect(linkedGoalContributions(goals, flows)).toEqual([
+      { goal_id: 'g1', amount_cents: 38_000, savings_goals: { name: 'Vacaciones' } },
+    ])
+  })
+
+  it('omite objetivos sin cuenta y los de neto cero', () => {
+    const flows = [
+      { account_id: 'a2', amount_cents: 1_000 },
+      { account_id: 'a2', amount_cents: -1_000 },
+    ]
+    expect(linkedGoalContributions(goals, flows)).toEqual([])
   })
 })

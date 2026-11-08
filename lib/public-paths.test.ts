@@ -3,7 +3,7 @@ import { isPublicPath } from './public-paths'
 
 describe('isPublicPath', () => {
   it('la landing, la demo, la ayuda y el acceso son públicas', () => {
-    for (const path of ['/', '/demo', '/help', '/login', '/register', '/register/check-email', '/auth/callback', '/offline']) {
+    for (const path of ['/', '/demo', '/help', '/login', '/register', '/register/check-email', '/auth/callback', '/offline', '/privacy']) {
       expect(isPublicPath(path)).toBe(true)
     }
   })

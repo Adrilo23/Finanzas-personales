@@ -4,9 +4,9 @@
 >
 > **Fuente de verdad:** este archivo del repo (GitHub `Adrilo23/Finanzas-personales`). Claude Code lo actualiza al terminar cada tarea, en el mismo commit que el código.
 
-## Estado actual: 🟢 Fases 1, 3, 3b y 3c completas, con tests y CI, y en producción. El 2026-11-05 se fusionaron los PR #6 a #11: ayudas «?», intereses con retención del 19 %, landing y demo públicas, skill de Agensi, primeros pasos sin «instalar» en ordenador y hojas que suben con el teclado en móvil. Migraciones 0001-0014 aplicadas en remoto; email del informe configurado con Resend. Aparcados: actualización programada de precios y envío automático del informe (ver notas). Siguiente: decidir el nombre del producto y el dominio propio (Fase 4); ver «Pendiente, por prioridad» al final
+## Estado actual: 🟢 Fases 1, 3, 3b y 3c completas, con tests y CI, y en producción. El 2026-11-05 se fusionaron los PR #6 a #11: ayudas «?», intereses con retención del 19 %, landing y demo públicas, skill de Agensi, primeros pasos sin «instalar» en ordenador y hojas que suben con el teclado en móvil. Migraciones 0001-0016 aplicadas en remoto; email del informe configurado con Resend. Aparcados: actualización programada de precios y envío automático del informe (ver notas). El 2026-11-08: informes con objetivos vinculados, README al día y privacidad/borrado de cuenta y registro de movimientos sin conexión. Siguiente: decidir el nombre del producto y el dominio propio (Fase 4); ver «Pendiente, por prioridad» al final
 
-Última actualización: 2026-11-05 (tarde)
+Última actualización: 2026-11-08
 
 Leyenda: `[x]` hecho · `[~]` hecho en parte (ver nota) · `[ ]` pendiente
 
@@ -52,7 +52,7 @@ Objetivo: poder llevar mis propias cuentas reales, aunque sea con UI básica.
 - [x] Configurar manifest y service worker (instalable en móvil) — Serwist (`app/sw.ts`, `app/manifest.ts`)
 - [x] Probar instalación en Android/iOS — probado por Adrián en móviles reales (2026-11-05)
 - [ ] Empaquetar con Tauri para escritorio (Windows/Mac)
-- [~] Modo offline básico — se pueden leer las páginas ya visitadas y hay una página `/offline`; **falta registrar sin conexión y sincronizar después**
+- [x] Modo offline básico — se pueden leer las páginas ya visitadas y hay una página `/offline`. **Registro sin conexión (2026-11-08, migración `0016`):** gastos, ingresos e inversiones nuevos se guardan en una cola en IndexedDB (`lib/offline-queue.ts`) y `OfflineSync` (`components/offline-sync.tsx`, montado en `AppNav`) los envía a `createTransaction` al abrir la app, al volver la conexión o la pestaña. Cada uno lleva un `client_id` (uuid) con índice único `(user_id, client_id)`: si el envío llega pero la respuesta se pierde, el reintento (23505) cuenta como guardado y no duplica dinero. Los rechazados por el servidor se muestran con su motivo y se descartan a mano. Traspasos y ediciones siguen necesitando conexión
 
 ## Fase 3 — Funcionalidades avanzadas
 - [x] Movimientos recurrentes (nóminas, alquiler, suscripciones) — generación diferida al cargar páginas (`lib/recurring.ts`)
@@ -97,7 +97,7 @@ Idea surgida al usar la app: una cuenta como MyInvestor contiene fondos cuyo val
 ## Fase 3c — Objetivos e informes (añadida 2026-10-06)
 - [x] **Objetivos de ahorro** (migración `0012`, `/goals`): nombre, icono, cantidad y fecha opcional. El progreso sale de **aportaciones manuales** (y retiradas) que registra el usuario; no son movimientos, así que no tocan saldos, informes ni presupuestos. Muestra ahorrado/objetivo, lo que falta, cuánto aportar al mes para llegar a la fecha, el ritmo real (media de los últimos 90 días), la fecha estimada y un estado (cumplido · vas a tiempo · con retraso · fecha superada). Lógica pura y testeada en `lib/goals.ts`
   - Decisión: aportaciones manuales y no vinculadas a una cuenta, para no contar dos veces el dinero ni acoplarlo al saldo
-  - [x] **Objetivo vinculado a una cuenta** (opcional, migración `0013`): el progreso es el saldo de la cuenta y el ritmo, el neto de sus movimientos de 90 días; sin aportaciones manuales. Si se borra la cuenta, vuelve a las aportaciones que tuviera. Pendiente: los informes mensual y anual solo listan aportaciones manuales, no el movimiento de las cuentas vinculadas
+  - [x] **Objetivo vinculado a una cuenta** (opcional, migración `0013`): el progreso es el saldo de la cuenta y el ritmo, el neto de sus movimientos de 90 días; sin aportaciones manuales. Si se borra la cuenta, vuelve a las aportaciones que tuviera. Los informes mensual y anual incluyen también el neto de movimientos de la cuenta vinculada en el periodo (2026-11-08, `linkedGoalContributions` en `lib/goals.ts`, con tests)
   - Resumen de objetivos en el inicio (los que van con retraso, primero)
 - [x] **Informe mensual** (`/reports/monthly?month=yyyy-MM`, enlazado desde Evolución): totales y balance del mes con tasa de ahorro y comparación con el mes anterior, gasto por categoría, mayores gastos, estado de presupuestos y aportaciones a objetivos. Se descarga como **PDF** (`/reports/monthly/export`, `lib/monthly-report-pdf.ts`). Cálculo puro y testeado en `lib/monthly-report.ts`
   - Los presupuestos no guardan histórico: un mes pasado se compara con los límites actuales
@@ -116,7 +116,7 @@ Idea surgida al usar la app: una cuenta como MyInvestor contiene fondos cuyo val
   - Revisión de diseño en dos rondas: la suma de la libreta cuadra con el balance («+ 11 apuntes más»), la animación espera a que la libreta esté en pantalla (`components/reveal-on-view.tsx`), las tres promesas van por separado y la etiqueta «Demo · datos de ejemplo» no se corta en móvil
   - Pendiente: decidir el nombre del producto (provisional «Finanzas»)
   - [x] `DESIGN.md` (2026-11-05): el sistema de diseño en el formato estándar (tokens en el frontmatter, ocho secciones), sacado del código: colores, tipografía, layout, sombras, formas, componentes y reglas. Lo acompaña `.impeccable/design.json` (rampas de color, sombras, movimiento y componentes de muestra)
-- [~] Documentación técnica del proyecto — `CLAUDE.md` describe la arquitectura; **falta la documentación pública**; el sistema de diseño está en `DESIGN.md`
+- [x] Documentación técnica del proyecto — `CLAUDE.md` describe la arquitectura, `README.md` (actualizado 2026-11-08) la presenta al público y el sistema de diseño está en `DESIGN.md`
 - [x] **Skill «safe-money-handling» para Agensi.io** (2026-11-05, PR #9): las reglas de dinero de la app, en genérico, para vender o mostrar como portfolio. `skills/safe-money-handling/`: `SKILL.md` + `reference/money.ts` (sin dependencias) + `money.test.ts` (9 tests con `node --test`); excluido del `tsconfig` de la app. Listado no exclusivo y sin ceder la propiedad intelectual; Agensi se queda el 30 %. ZIP, capturas, logo y textos del anuncio preparados; enviado a Agensi por Adrián (2026-11-05)
 - [x] Capturas para la publicación 3 de LinkedIn (presupuestos, recurrentes, objetivos) con el usuario de pruebas `ejemplo@ejemplo.com`; nunca con la cuenta real
 - [ ] Despliegue estable en dominio propio
@@ -125,7 +125,7 @@ Idea surgida al usar la app: una cuenta como MyInvestor contiene fondos cuyo val
 - [~] Activar soporte multiusuario real — el esquema y la RLS (`user_id = auth.uid()`) ya están preparados
 - [ ] Planes de suscripción (Stripe)
 - [~] Onboarding para nuevos usuarios — lista de primeros pasos en el inicio, ayuda `/help`, ayudas «?», demo y landing (ver Fase 4); categorías por defecto precargadas. Falta pensarlo para usuarios de pago (planes, límites)
-- [ ] Política de privacidad / RGPD
+- [x] Política de privacidad / RGPD (2026-11-08): página pública `/privacy` (datos, encargados —Supabase, Vercel, Resend, Yahoo—, cookies, derechos) y `/settings` («Tu cuenta») con **eliminar mi cuenta** (migración `0015`, `delete_my_account`; borra adjuntos de Storage y luego el usuario, el resto cascadea). Enlazadas desde el menú de usuario y la landing. **Falta:** rellenar `CONTACT_EMAIL` en `app/privacy/page.tsx` y que revises el texto antes de abrir la app a terceros
 
 ---
 
@@ -139,10 +139,10 @@ Idea surgida al usar la app: una cuenta como MyInvestor contiene fondos cuyo val
 
 ## Pendiente, por prioridad (2026-11-05)
 1. **Nombre del producto y dominio propio:** con el dominio se verifica también el remitente de Resend para que el informe por email llegue a cualquier usuario.
-2. **Documentación pública** (README para quien vea el repo).
-3. **Registrar sin conexión** y sincronizar después (Fase 2).
-4. **Informes:** los objetivos vinculados a una cuenta no aparecen en las aportaciones del mensual ni del anual.
-5. **Antes de vender (Fase 5):** proveedor de precios con licencia comercial, política de privacidad/RGPD, planes con Stripe, y, si hace falta, cron con service role key para precios e informe automático.
+2. ~~Documentación pública~~ (hecho 2026-11-08).
+3. ~~Registrar sin conexión~~ (hecho 2026-11-08).
+4. ~~Informes: objetivos vinculados a una cuenta~~ (hecho 2026-11-08).
+5. **Antes de vender (Fase 5):** proveedor de precios con licencia comercial, planes con Stripe, y, si hace falta, cron con service role key para precios e informe automático.
 6. **Más adelante:** empaquetar con Tauri para escritorio.
 
 ## Cómo usar este documento con Claude

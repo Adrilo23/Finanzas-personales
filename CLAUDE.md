@@ -98,6 +98,9 @@ Sin sesión, `/` pinta la landing (`app/landing.tsx`) en vez del inicio, y `/dem
 
 **Límite de 1000 filas:** PostgREST corta cada respuesta en `max_rows` (1000) sin avisar. Cualquier consulta de movimientos que pueda superar ese número (un año, todo el histórico) debe paginar con `fetchAllRows` (`lib/fetch-all.ts`) y un orden estable (`.order('id')`).
 
+### Privacidad y borrado de cuenta
+`/privacy` (pública) explica qué datos se guardan y quién los trata; si cambias de proveedor o añades uno, actualízala. `/settings` permite borrar la cuenta: `deleteMyAccount` elimina los adjuntos de Storage y llama a la RPC `delete_my_account` (migración `0015`), que borra el usuario y el resto cascadea. Una tabla nueva con `user_id` debe referenciar `auth.users` con `on delete cascade`; un bucket nuevo, borrarse en esa acción.
+
 ### Seguridad
 - **Cabeceras:** `proxy.ts` genera un nonce por petición y la CSP (`buildCsp` en `lib/security-headers.ts`): scripts solo con nonce, `frame-ancestors 'none'`, `connect-src` limitado a la app y Supabase. Next pone el nonce en sus scripts porque todas las páginas son dinámicas; una página estática no lo recibiría. Las cabeceras fijas (`X-Frame-Options`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`) están en `next.config.ts`. Si añades un origen externo (fuente, API desde el navegador), añádelo a la CSP.
 - **Login:** `login` limita los fallos por IP+email (5 en 15 min) y por IP (30) con las funciones `login_throttle_status` / `login_throttle_fail` (migración `0014`, tabla `login_attempts` sin acceso directo) y responde siempre «Email o contraseña incorrectos». Si el limitador falla, no bloquea el login.

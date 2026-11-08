@@ -539,6 +539,7 @@ export type Database = {
           account_id: string
           amount_cents: number
           category_id: string | null
+          client_id: string | null
           created_at: string
           currency: string
           deleted_at: string | null
@@ -554,6 +555,7 @@ export type Database = {
           account_id: string
           amount_cents: number
           category_id?: string | null
+          client_id?: string | null
           created_at?: string
           currency?: string
           deleted_at?: string | null
@@ -569,6 +571,7 @@ export type Database = {
           account_id?: string
           amount_cents?: number
           category_id?: string | null
+          client_id?: string | null
           created_at?: string
           currency?: string
           deleted_at?: string | null
@@ -668,6 +671,7 @@ export type Database = {
         Args: { p_to_account: string; p_transaction_id: string }
         Returns: string
       }
+      delete_my_account: { Args: never; Returns: undefined }
       login_throttle_fail: { Args: { p_keys: string[] }; Returns: number }
       login_throttle_status: { Args: { p_keys: string[] }; Returns: number }
       owns_account: { Args: { p_id: string }; Returns: boolean }
