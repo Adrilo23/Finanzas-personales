@@ -1,7 +1,17 @@
 import type { Metadata } from 'next'
-import { getMonthlyEvolution, getYearlyEvolution } from '@/lib/reports'
+import { format } from 'date-fns'
+import { getDailyEvolution, getYearMonthsEvolution } from '@/lib/reports'
+import { adjacentMonths, parseMonthParam } from '@/lib/monthly-report'
+import { adjacentYears, parseYearParam } from '@/lib/annual-report'
+import { formatMonthYear } from '@/lib/format'
 import Link from 'next/link'
-import { CalendarRangeIcon, ChartColumnIcon, FileTextIcon } from 'lucide-react'
+import {
+  CalendarRangeIcon,
+  ChartColumnIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  FileTextIcon,
+} from 'lucide-react'
 import { buttonVariants } from '@/components/ui/button'
 import { PageHeader, PageShell } from '@/components/page-header'
 import { EmptyState } from '@/components/empty-state'
@@ -22,11 +32,25 @@ const VIEWS: { value: View; label: string }[] = [
 export default async function ReportsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ vista?: string }>
+  searchParams: Promise<{ vista?: string; month?: string; year?: string }>
 }) {
-  const view: View = (await searchParams).vista === 'anual' ? 'anual' : 'mensual'
+  const params = await searchParams
+  const view: View = params.vista === 'anual' ? 'anual' : 'mensual'
   const yearly = view === 'anual'
-  const data = yearly ? await getYearlyEvolution() : await getMonthlyEvolution()
+  const now = new Date()
+  const month = parseMonthParam(params.month, now)
+  const year = parseYearParam(params.year, now)
+  const monthKey = format(month, 'yyyy-MM')
+  const data = yearly ? await getYearMonthsEvolution(year, now) : await getDailyEvolution(month, now)
+
+  const months = adjacentMonths(month, now)
+  const years = adjacentYears(year, now)
+  const navClass = buttonVariants({ variant: 'outline', size: 'icon-sm' })
+  const prevHref = yearly ? `/reports?vista=anual&year=${years.prev}` : `/reports?month=${months.prev}`
+  const nextHref = yearly
+    ? years.next && `/reports?vista=anual&year=${years.next}`
+    : months.next && `/reports?month=${months.next}`
+  const periodLabel = yearly ? String(year) : formatMonthYear(month)
 
   const totals = data.reduce(
     (acc, p) => ({
@@ -39,7 +63,9 @@ export default async function ReportsPage({
   )
   const activeMonths = data.filter((p) => p.ingresos || p.gastos || p.inversion).length
   const savingsRate = totals.ingresos > 0 ? (totals.balance / totals.ingresos) * 100 : null
-  const avgExpense = activeMonths > 0 ? totals.gastos / activeMonths : 0
+  // Gasto medio: por mes con movimientos (año) o por día transcurrido (mes).
+  const avgDivisor = yearly ? activeMonths : data.length
+  const avgExpense = avgDivisor > 0 ? totals.gastos / avgDivisor : 0
 
   const stats = [
     { label: 'Ingresos', value: euro.format(totals.ingresos), dot: 'bg-chart-1' },
@@ -53,7 +79,7 @@ export default async function ReportsPage({
           : `${savingsRate.toLocaleString('es-ES', { maximumFractionDigits: 1 })} %`,
       hint:
         activeMonths > 0
-          ? `Gasto medio: ${euro.format(avgExpense)}/${yearly ? 'año' : 'mes'}`
+          ? `Gasto medio: ${euro.format(avgExpense)}/${yearly ? 'mes' : 'día'}`
           : undefined,
     },
   ]
@@ -64,20 +90,21 @@ export default async function ReportsPage({
         title="Evolución"
         description={
           yearly
-            ? 'Cada año desde tu primer movimiento, incluido el actual (hasta hoy).'
-            : 'Los últimos 12 meses, incluido el actual.'
+            ? 'Mes a mes de un año; en el año en curso, hasta el mes actual.'
+            : 'Día a día de un mes; en el mes en curso, hasta hoy.'
         }
         actions={
-          <>
-            <Link href="/reports/monthly" className={buttonVariants({ variant: 'outline' })}>
-              <FileTextIcon data-icon="inline-start" />
-              Informe mensual
-            </Link>
-            <Link href="/reports/annual" className={buttonVariants({ variant: 'outline' })}>
+          yearly ? (
+            <Link href={`/reports/annual?year=${year}`} className={buttonVariants({ variant: 'outline' })}>
               <CalendarRangeIcon data-icon="inline-start" />
               Informe anual
             </Link>
-          </>
+          ) : (
+            <Link href={`/reports/monthly?month=${monthKey}`} className={buttonVariants({ variant: 'outline' })}>
+              <FileTextIcon data-icon="inline-start" />
+              Informe mensual
+            </Link>
+          )
         }
       />
 
@@ -102,11 +129,27 @@ export default async function ReportsPage({
         })}
       </nav>
 
+      <div className="flex items-center gap-2">
+        <Link href={prevHref} className={navClass} aria-label={yearly ? 'Año anterior' : 'Mes anterior'}>
+          <ChevronLeftIcon />
+        </Link>
+        {nextHref ? (
+          <Link href={nextHref} className={navClass} aria-label={yearly ? 'Año siguiente' : 'Mes siguiente'}>
+            <ChevronRightIcon />
+          </Link>
+        ) : (
+          <span aria-hidden className={cn(navClass, 'pointer-events-none opacity-40')}>
+            <ChevronRightIcon />
+          </span>
+        )}
+        <h2 className="text-base font-semibold capitalize">{periodLabel}</h2>
+      </div>
+
       {activeMonths === 0 ? (
         <EmptyState
           icon={ChartColumnIcon}
           title="Todavía no hay nada que mostrar"
-          description={`Cuando registres movimientos verás aquí cómo evolucionan tus ingresos, gastos e inversión ${yearly ? 'año a año' : 'mes a mes'}.`}
+          description={`Cuando registres movimientos verás aquí cómo evolucionan tus ingresos, gastos e inversión ${yearly ? 'mes a mes' : 'día a día'}.`}
         />
       ) : (
         <>
@@ -133,7 +176,7 @@ export default async function ReportsPage({
             ))}
           </dl>
 
-          <EvolutionChart data={data} title={yearly ? 'Por año' : 'Por mes'} />
+          <EvolutionChart data={data} title={yearly ? 'Por mes' : 'Por día'} />
 
           <details className="group surface overflow-hidden">
             <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3.5 text-sm font-medium outline-none select-none hover:bg-muted/40 focus-visible:bg-muted/60 sm:px-6 [&::-webkit-details-marker]:hidden">
@@ -150,7 +193,7 @@ export default async function ReportsPage({
                 <thead className="text-xs text-muted-foreground">
                   <tr>
                     <th scope="col" className="px-4 py-2.5 text-left font-medium sm:px-6">
-                      {yearly ? 'Año' : 'Mes'}
+                      {yearly ? 'Mes' : 'Día'}
                     </th>
                     <th scope="col" className="px-3 py-2.5 font-medium">
                       Ingresos
@@ -168,14 +211,14 @@ export default async function ReportsPage({
                 </thead>
                 <tbody className="divide-y divide-border/60">
                   {[...data].reverse().map((p) => (
-                    <tr key={p.month}>
+                    <tr key={p.period}>
                       <th
                         scope="row"
                         className="px-4 py-2 text-left font-medium capitalize sm:px-6"
                       >
                         {yearly ? (
                           <Link
-                            href={`/reports/annual?year=${p.month}`}
+                            href={`/reports/monthly?month=${p.period}`}
                             className="underline-offset-2 hover:text-brand hover:underline"
                           >
                             {p.month}
