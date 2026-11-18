@@ -8,7 +8,9 @@ import {
   parseUnitsInput,
   parseYahooChart,
   parseYahooSearch,
+  priceFromUnits,
   roundUnits,
+  unitsFromPrice,
 } from './investments'
 
 describe('isValidIsin', () => {
@@ -171,5 +173,25 @@ describe('isPriceStale', () => {
 
   test('un tipo desconocido se trata como fondo', () => {
     expect(isPriceStale('otro', ago(90), now)).toBe(false)
+  })
+})
+
+describe('priceFromUnits / unitsFromPrice', () => {
+  test('precio = importe / participaciones', () => {
+    expect(priceFromUnits(500, 4)).toBe(125)
+    expect(priceFromUnits(325, 3.12345678)).toBe(104.051384)
+  })
+
+  test('participaciones = importe / precio, a 8 decimales', () => {
+    expect(unitsFromPrice(500, 125)).toBe(4)
+    expect(unitsFromPrice(100, 3)).toBe(33.33333333)
+  })
+
+  test('sin importe, participaciones o precio válidos no hay resultado', () => {
+    expect(priceFromUnits(0, 4)).toBeNull()
+    expect(priceFromUnits(500, 0)).toBeNull()
+    expect(unitsFromPrice(500, 0)).toBeNull()
+    expect(unitsFromPrice(-1, 10)).toBeNull()
+    expect(unitsFromPrice(500, Number.NaN)).toBeNull()
   })
 })

@@ -53,7 +53,19 @@ export function roundUnits(units: number): number {
   return Math.round(units * 1e8) / 1e8
 }
 
-export type InstrumentInfo = { symbol: string; name: string; currency: string | null }
+/** Precio por participación que resulta de un importe (€) y unas participaciones; null si no se puede calcular. */
+export function priceFromUnits(amountEuros: number, units: number): number | null {
+  if (!(amountEuros > 0) || !(units > 0)) return null
+  return Math.round((amountEuros / units) * 1e6) / 1e6
+}
+
+/** Participaciones que salen de un importe (€) y un precio por participación; null si no se puede calcular. */
+export function unitsFromPrice(amountEuros: number, price: number): number | null {
+  if (!(amountEuros > 0) || !(price > 0)) return null
+  return roundUnits(amountEuros / price)
+}
+
+export type InstrumentInfo ={ symbol: string; name: string; currency: string | null }
 export type PricePoint = { date: string; price: number }
 
 type YahooSearchResponse = {
