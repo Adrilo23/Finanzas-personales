@@ -180,6 +180,39 @@ export async function deleteOperation(id: string, accountId: string) {
   return { success: true }
 }
 
+/**
+ * Guarda los ajustes de una compra pendiente (participaciones e importe) sin confirmarla:
+ * sigue pendiente hasta que se confirme. Las participaciones pueden quedar vacías.
+ */
+export async function updatePendingOperation(id: string, accountId: string, formData: FormData) {
+  const rawUnits = Number(formData.get('units'))
+  const units = rawUnits > 0 && Number.isFinite(rawUnits) ? roundUnits(rawUnits) : null
+  const parsedAmount = positiveAmount.safeParse(Number(formData.get('amount')))
+  if (!parsedAmount.success) {
+    return { error: parsedAmount.error.issues[0].message }
+  }
+
+  const supabase = await createClient()
+  if (!(await requireUser(supabase))) return { error: NO_SESSION_ERROR }
+  const { data, error } = await supabase
+    .from('holding_operations')
+    .update({ units, amount_cents: eurosToCents(parsedAmount.data) })
+    .eq('id', id)
+    .eq('status', 'pending')
+    .select('id')
+    .maybeSingle()
+
+  if (error) {
+    return { error: userError(error) }
+  }
+  if (!data) {
+    return { error: 'La operación ya estaba confirmada o no existe' }
+  }
+
+  revalidateInvestmentViews(accountId)
+  return { success: true }
+}
+
 /** Confirma una compra pendiente (de un plan de aportación) con los datos reales del bróker. */
 export async function confirmOperation(id: string, accountId: string, formData: FormData) {
   const units = roundUnits(Number(formData.get('units')))
