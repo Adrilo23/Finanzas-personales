@@ -6,7 +6,7 @@
 
 ## Estado actual: 🟢 Fases 1, 3, 3b y 3c completas, con tests y CI, y en producción. El 2026-11-05 se fusionaron los PR #6 a #11: ayudas «?», intereses con retención del 19 %, landing y demo públicas, skill de Agensi, primeros pasos sin «instalar» en ordenador y hojas que suben con el teclado en móvil. Migraciones 0001-0017 aplicadas en remoto; email del informe configurado con Resend. Aparcados: actualización programada de precios y envío automático del informe (ver notas). El 2026-11-08: informes con objetivos vinculados, README al día y privacidad/borrado de cuenta y registro de movimientos sin conexión. Siguiente: decidir el nombre del producto y el dominio propio (Fase 4); ver «Pendiente, por prioridad» al final
 
-Última actualización: 2026-11-08
+Última actualización: 2026-11-18
 
 Leyenda: `[x]` hecho · `[~]` hecho en parte (ver nota) · `[ ]` pendiente
 
@@ -57,7 +57,7 @@ Objetivo: poder llevar mis propias cuentas reales, aunque sea con UI básica.
 ## Fase 3 — Funcionalidades avanzadas
 - [x] Movimientos recurrentes (nóminas, alquiler, suscripciones) — generación diferida al cargar páginas (`lib/recurring.ts`)
 - [x] Adjuntar tickets/facturas (Supabase Storage) — bucket privado `attachments` (migración 0003)
-- [x] Gráficas de evolución mensual/anual (Recharts) — en Evolución, selector Mensual (últimos 12 meses) | Anual (un punto por año desde el primer movimiento; el año en curso, hasta hoy). Cada año de la tabla enlaza a su informe anual. `aggregateYearly` en `lib/reports.ts`, con tests
+- [x] Gráficas de evolución mensual/anual (Recharts) — en Evolución, selector Mensual (el mes elegido, por defecto el actual, día a día hasta hoy) | Anual (los meses de un año elegido, por defecto el actual, hasta el mes en curso), con flechas para cambiar de mes/año (2026-11-18: antes eran «últimos 12 meses» y «un punto por año»). Cada mes de la tabla anual enlaza a su informe mensual. `aggregateDaily` y `aggregateYearMonths` en `lib/reports.ts`, con tests
   - De paso: las consultas de 12 meses y de todo el histórico paginan (`fetchAllRows`), porque PostgREST corta en 1000 filas por respuesta y los totales salían incompletos sin avisar
 - [x] Exportación a Excel/PDF — `app/transactions/export/route.ts`
 - [x] Presupuestos por categoría con alertas — migración `0005`, `/budgets` y bloque en el inicio. Límite mensual por categoría de gasto, las subcategorías suman al padre, y los avisos son visuales (80 % «cerca del límite», >100 % «superado»), sin notificaciones externas. Partió de la propuesta del Project de claude.ai, adaptada al diseño y con correcciones (fechas en hora local, validación de la categoría en el servidor)

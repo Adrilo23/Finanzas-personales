@@ -15,7 +15,8 @@ import { useSyncExternalStore } from 'react'
 import type { MonthlyPoint } from '@/lib/reports'
 import { niceAxis } from '@/lib/chart-axis'
 
-// Sirve para la vista mensual y la anual (`month` es la etiqueta del punto).
+// Sirve para la vista mensual (días) y la anual (meses): `month` es la etiqueta
+// completa del punto y `axis`, la corta del eje X.
 // Orden validado para daltonismo: ingresos → inversión → gastos (barras contiguas).
 const SERIES = [
   { key: 'ingresos', label: 'Ingresos', color: 'var(--chart-1)' },
@@ -47,12 +48,12 @@ type ChartTooltipProps = {
   label?: string | number
 }
 
-function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
+function ChartTooltip({ active, payload }: ChartTooltipProps) {
   const point = payload?.[0]?.payload as MonthlyPoint | undefined
   if (!active || !point) return null
   return (
     <div className="min-w-44 rounded-xl bg-popover px-3 py-2.5 text-[0.8125rem] text-popover-foreground shadow-(--shadow-pop)">
-      <p className="mb-1.5 font-medium capitalize">{label}</p>
+      <p className="mb-1.5 font-medium capitalize">{point.month}</p>
       <dl className="grid gap-1">
         {SERIES.map((s) => (
           <div key={s.key} className="flex items-center justify-between gap-4">
@@ -103,12 +104,13 @@ export function EvolutionChart({ data, title }: { data: MonthlyPoint[]; title: s
           <ComposedChart data={data} margin={{ top: 10, right: 4, left: 0, bottom: 0 }} barGap={2}>
             <CartesianGrid vertical={false} stroke="var(--chart-grid)" />
             <XAxis
-              dataKey="month"
+              dataKey={(p: MonthlyPoint) => p.axis ?? p.month}
               tickLine={false}
               axisLine={false}
               tickMargin={10}
-              // En móvil, un mes sí y otro no, para que el hueco entre etiquetas sea regular.
-              interval={narrow && data.length > 6 ? 1 : 0}
+              // Con muchos puntos (días) se salta alguno; en móvil, uno sí y otro no
+              // a partir de 6, para que el hueco entre etiquetas sea regular.
+              interval={data.length > 12 ? (narrow ? 4 : 2) : narrow && data.length > 6 ? 1 : 0}
               tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
               tickFormatter={(value: string) => value.replace('.', '')}
             />
@@ -135,7 +137,7 @@ export function EvolutionChart({ data, title }: { data: MonthlyPoint[]; title: s
                 name={s.label}
                 fill={s.color}
                 radius={[4, 4, 0, 0]}
-                maxBarSize={14}
+                maxBarSize={data.length > 12 ? 8 : 14}
                 animationDuration={500}
               />
             ))}

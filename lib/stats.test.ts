@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { percentChange, sumByType } from './stats'
-import { aggregateMonthly, aggregateYearly } from './reports'
+import { aggregateDaily, aggregateMonthly, aggregateYearMonths } from './reports'
 
 describe('sumByType', () => {
   test('separa ingresos, gastos e inversión en céntimos positivos', () => {
@@ -61,40 +61,73 @@ describe('aggregateMonthly', () => {
   })
 })
 
-describe('aggregateYearly', () => {
-  const now = new Date(2026, 10, 3)
-  const row = (amount_cents: number, transaction_date: string, type: string | null) => ({
-    amount_cents,
-    transaction_date,
-    categories: type ? { type } : null,
+const row = (amount_cents: number, transaction_date: string, type: string | null) => ({
+  amount_cents,
+  transaction_date,
+  categories: type ? { type } : null,
+})
+
+describe('aggregateDaily', () => {
+  test('mes en curso: un punto por día hasta hoy', () => {
+    const result = aggregateDaily([], new Date(2026, 10, 1), new Date(2026, 10, 18))
+    expect(result).toHaveLength(18)
+    expect(result[0]).toMatchObject({ axis: '1', period: '2026-11-01', ingresos: 0 })
+    expect(result[17]).toMatchObject({ axis: '18', period: '2026-11-18' })
   })
 
-  test('sin movimientos: solo el año actual, a 0', () => {
-    expect(aggregateYearly([], now)).toEqual([
-      { month: '2026', ingresos: 0, gastos: 0, inversion: 0, balance: 0 },
-    ])
+  test('mes pasado: todos los días del mes', () => {
+    expect(aggregateDaily([], new Date(2026, 1, 1), new Date(2026, 10, 18))).toHaveLength(28)
   })
 
-  test('un punto por año desde el más antiguo, con los años vacíos a 0', () => {
-    const result = aggregateYearly(
+  test('suma por día, ignora otros meses y los traspasos no cuentan', () => {
+    const result = aggregateDaily(
       [
-        row(150000, '2024-03-01', 'income'),
-        row(-40000, '2024-03-02', 'expense'),
-        row(-10000, '2026-01-10', 'investment'),
-        // Traspaso: no cuenta como ingreso ni gasto y sus patas se anulan en el balance.
-        row(-5000, '2026-02-01', null),
-        row(5000, '2026-02-01', null),
+        row(150000, '2026-11-02', 'income'),
+        row(-4050, '2026-11-02', 'expense'),
+        row(-1000, '2026-11-02', 'expense'),
+        row(-20000, '2026-11-10', 'investment'),
+        row(-5000, '2026-11-10', null),
+        row(5000, '2026-11-10', null),
+        row(-999, '2026-10-31', 'expense'),
       ],
+      new Date(2026, 10, 1),
+      new Date(2026, 10, 18)
+    )
+    expect(result[1]).toMatchObject({ ingresos: 1500, gastos: 50.5, balance: 1449.5 })
+    expect(result[9]).toMatchObject({ inversion: 200, gastos: 0, balance: -200 })
+    expect(result.reduce((sum, p) => sum + p.gastos, 0)).toBe(50.5)
+  })
+})
+
+describe('aggregateYearMonths', () => {
+  const now = new Date(2026, 10, 3)
+
+  test('año en curso: de enero al mes actual, con los vacíos a 0', () => {
+    const result = aggregateYearMonths([], 2026, now)
+    expect(result).toHaveLength(11)
+    expect(result[0]).toMatchObject({ axis: 'ene', period: '2026-01', balance: 0 })
+    expect(result[10].period).toBe('2026-11')
+  })
+
+  test('año pasado: los 12 meses', () => {
+    expect(aggregateYearMonths([], 2025, now)).toHaveLength(12)
+  })
+
+  test('agrupa por mes, ignora otros años y los traspasos no cuentan', () => {
+    const result = aggregateYearMonths(
+      [
+        row(150000, '2025-03-01', 'income'),
+        row(-40000, '2025-03-02', 'expense'),
+        row(-10000, '2025-12-10', 'investment'),
+        row(-5000, '2025-02-01', null),
+        row(5000, '2025-02-01', null),
+        row(99999, '2024-03-01', 'income'),
+      ],
+      2025,
       now
     )
-    expect(result).toEqual([
-      { month: '2024', ingresos: 1500, gastos: 400, inversion: 0, balance: 1100 },
-      { month: '2025', ingresos: 0, gastos: 0, inversion: 0, balance: 0 },
-      { month: '2026', ingresos: 0, gastos: 0, inversion: 100, balance: -100 },
-    ])
-  })
-
-  test('ignora movimientos con fecha futura en un año posterior', () => {
-    expect(aggregateYearly([row(1000, '2027-01-01', 'income')], now)).toHaveLength(1)
+    expect(result[2]).toMatchObject({ ingresos: 1500, gastos: 400, balance: 1100 })
+    expect(result[11]).toMatchObject({ inversion: 100, balance: -100 })
+    expect(result[1]).toMatchObject({ ingresos: 0, gastos: 0, balance: 0 })
   })
 })
